@@ -50,8 +50,8 @@ public class StockAlertServiceImpl implements StockAlertService {
         if (product.getAlertMin() != null && currentStock < product.getAlertMin()) {
             LambdaQueryWrapper<StockAlert> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(StockAlert::getProductId, productId)
-                   .eq(StockAlert::getAlertType, "LOW_STOCK")
-                   .eq(StockAlert::getStatus, "pending");
+                    .eq(StockAlert::getAlertType, "LOW_STOCK")
+                    .eq(StockAlert::getStatus, "pending");
             Long count = stockAlertMapper.selectCount(wrapper);
             if (count == 0) {
                 StockAlert alert = new StockAlert();
@@ -61,16 +61,16 @@ public class StockAlertServiceImpl implements StockAlertService {
                 alert.setActualStock(currentStock);
                 alert.setStatus("pending");
                 stockAlertMapper.insert(alert);
-                logger.warn("Stock alert triggered: Product [{}] current stock {} is below minimum {}", 
-                    product.getProductName(), currentStock, product.getAlertMin());
+                logger.warn("Stock alert triggered: Product [{}] current stock {} is below minimum {}",
+                        product.getProductName(), currentStock, product.getAlertMin());
             }
         }
 
         if (product.getAlertMax() != null && currentStock > product.getAlertMax()) {
             LambdaQueryWrapper<StockAlert> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(StockAlert::getProductId, productId)
-                   .eq(StockAlert::getAlertType, "OVER_STOCK")
-                   .eq(StockAlert::getStatus, "pending");
+                    .eq(StockAlert::getAlertType, "OVER_STOCK")
+                    .eq(StockAlert::getStatus, "pending");
             Long count = stockAlertMapper.selectCount(wrapper);
             if (count == 0) {
                 StockAlert alert = new StockAlert();
@@ -80,8 +80,8 @@ public class StockAlertServiceImpl implements StockAlertService {
                 alert.setActualStock(currentStock);
                 alert.setStatus("pending");
                 stockAlertMapper.insert(alert);
-                logger.warn("Stock alert triggered: Product [{}] current stock {} is above maximum {}", 
-                    product.getProductName(), currentStock, product.getAlertMax());
+                logger.warn("Stock alert triggered: Product [{}] current stock {} is above maximum {}",
+                        product.getProductName(), currentStock, product.getAlertMax());
             }
         }
     }
@@ -90,8 +90,8 @@ public class StockAlertServiceImpl implements StockAlertService {
     public IPage<StockAlertVo> pageQuery(StockAlertQueryDto queryDto) {
         LambdaQueryWrapper<StockAlert> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(queryDto.getStatus() != null, StockAlert::getStatus, queryDto.getStatus())
-               .eq(queryDto.getProductId() != null, StockAlert::getProductId, queryDto.getProductId())
-               .orderByDesc(StockAlert::getCreateTime);
+                .eq(queryDto.getProductId() != null, StockAlert::getProductId, queryDto.getProductId())
+                .orderByDesc(StockAlert::getCreateTime);
 
         int pageNum = queryDto.getPageNum() != null ? queryDto.getPageNum() : 1;
         int pageSize = queryDto.getPageSize() != null ? queryDto.getPageSize() : 10;
@@ -132,6 +132,27 @@ public class StockAlertServiceImpl implements StockAlertService {
                 productMapper.updateById(product);
             }
         }
+    }
+
+    @Override
+    public java.util.Map<String, Object> getStats() {
+        java.util.Map<String, Object> stats = new java.util.HashMap<>();
+
+        LambdaQueryWrapper<StockAlert> totalWrapper = new LambdaQueryWrapper<>();
+        Long total = stockAlertMapper.selectCount(totalWrapper);
+        stats.put("total", total);
+
+        LambdaQueryWrapper<StockAlert> pendingWrapper = new LambdaQueryWrapper<>();
+        pendingWrapper.eq(StockAlert::getStatus, "pending");
+        Long pending = stockAlertMapper.selectCount(pendingWrapper);
+        stats.put("pending", pending);
+
+        LambdaQueryWrapper<StockAlert> handledWrapper = new LambdaQueryWrapper<>();
+        handledWrapper.eq(StockAlert::getStatus, "handled");
+        Long handled = stockAlertMapper.selectCount(handledWrapper);
+        stats.put("handled", handled);
+
+        return stats;
     }
 
     @Scheduled(cron = "0 0 2 * * ?")

@@ -14,4 +14,6 @@ public interface StockAlertService {
     void handleAlert(StockAlertHandleDto dto);
 
     void batchUpdateThresholds(java.util.List<com.wms.dto.StockThresholdDto> thresholds);
+
+    java.util.Map<String, Object> getStats();
 }

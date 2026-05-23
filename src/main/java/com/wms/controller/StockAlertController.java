@@ -12,6 +12,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/alert")
 @RequiredArgsConstructor
@@ -19,6 +21,12 @@ import org.springframework.web.bind.annotation.*;
 public class StockAlertController {
 
     private final StockAlertService stockAlertService;
+
+    @GetMapping("/stats")
+    public Result<Map<String, Object>> stats() {
+        Map<String, Object> stats = stockAlertService.getStats();
+        return Result.success(stats);
+    }
 
     @GetMapping("/page")
     @PreAuthorize("hasAuthority('alert:query')")
