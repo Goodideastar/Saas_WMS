@@ -69,6 +69,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-wms123456}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ""
       JWT_SECRET: ${JWT_SECRET:-wms-jwt-secret-key-2024-very-long-secret-for-security}
     depends_on:
       mysql:
