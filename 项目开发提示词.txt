@@ -1,0 +1,48 @@
+1. 项目初始化与基础配置
+请使用 Spring Boot 3.2+（最新稳定版）、Java 21、Maven/Gradle 创建一个后端项目。添加以下依赖：Spring Web、Spring Data JPA（实际使用MyBatis Plus替代，但保留依赖）、MyBatis Plus、MySQL Driver、Spring Data Redis、Spring Security、JWT、Lombok、Validation、Spring Boot Starter Actuator。生成标准的项目目录结构，包含：controller、service（含impl）、mapper、entity、dto、vo、config、security、utils、exception、common（统一响应、常量等）。并提供 application.yml 配置文件，配置MySQL、Redis（含连接池）、MyBatis Plus（分页插件、逻辑删除、自动填充）、JWT有效期与秘钥、日志级别等。
+2. MyBatis Plus 代码生成器提示词
+请生成 MyBatis Plus 的代码生成器配置类。能够根据数据库表（如user、role、permission、product、warehouse、inbound_order、outbound_order、stock_alert等）自动生成 entity、mapper（含泛型基础方法）、service（接口及实现类）、controller（基础CRUD模板）。生成器需使用 Velocity 或 Freemarker 模板，输出路径为 src/main/java，包名为 com.wms。同时生成基础的 BaseEntity（包含id、createTime、updateTime、isDeleted等字段）并配置逻辑删除和自动填充。
+3. 统一响应与异常处理提示词
+请实现统一响应结构 Result<T>（含code、message、data、timestamp），并提供成功、失败、分页等静态工厂方法。全局异常处理器 @RestControllerAdvice 需处理：参数校验异常（MethodArgumentNotValidException）、业务自定义异常（BusinessException）、权限异常（AccessDeniedException）、持久层异常等，返回标准错误格式。同时添加 Validated 参数校验示例（分组校验）。
+4. Spring Security + JWT 权限管理提示词
+请实现基于 Spring Security 6 + JWT 的无状态认证授权方案。要求：- 用户实体 User（含username、password、email、phone、status），角色 Role（RBAC模型，用户-角色-权限）。- 使用 JWT 生成 access_token，有效期2小时；可选 refresh_token 存于Redis。- 自定义 UserDetailsService 加载用户及权限。- JwtAuthenticationFilter 拦截请求，解析Token并设置 SecurityContext。- 配置 SecurityFilterChain，放行 /auth/login、/auth/register、/doc.html（API文档）、/actuator/health 等，其余接口需认证。- 提供权限注解如 @PreAuthorize("hasAuthority('product:add')") 控制接口访问。- 提供登录接口 /auth/login，返回 token；退出接口 /auth/logout 将 token 加入黑名单（Redis）。- 密码使用 BCryptPasswordEncoder 加密。
+5. 货品管理模块提示词
+请实现货品管理模块（Product）的完整 CRUD，要求：- 实体包含：id、编码（唯一）、名称、规格、单位、类别、图片URL、参考进价、参考售价、当前库存量、预警下限、预警上限、状态、备注、创建人、更新人、时间字段。- 使用 MyBatis Plus 的 ServiceImpl 实现分页查询（支持多条件：编码、名称、类别、状态）及批量导入导出（Excel）。- 接口权限：列表查询（product:list）、新增（product:add）、修改（product:edit）、删除（product:delete）逻辑删除。- 校验：编码唯一性（自定义校验注解）、库存非负。- 提供库存批量调整接口（adjustStock）用于盘点，需记录调整日志（StockLog）。- 生成对应的 DTO（ProductDto、ProductQueryDto）和 VO（ProductVo），使用 MapStruct 做对象转换。
+6. 入库管理模块提示词
+请实现入库管理模块（InboundOrder），包含：- 入库单实体：订单号（规则：IN+年月日+流水号）、仓库ID、供应商、入库类型（采购入库/退货入库/盘盈入库）、关联订单号（可选）、操作人、状态（待审核/已完成/已取消）、入库时间、备注。- 入库明细（InboundOrderItem）：入库单ID、货品ID、应入数量、实入数量、单价、小计、批次号（可选）、生产日期、有效期。- 业务流程：创建入库单（状态待审核）→ 审核通过 → 增加对应货品库存 → 修改入库单状态为已完成 → 生成库存流水。- 要求使用 @Transactional 保证事务，更新库存时加行锁（SELECT FOR UPDATE 或乐观锁）。- 接口：创建入库单（需校验货品存在）、审核入库单、取消入库单、分页查询入库单列表（按订单号、状态、入库时间范围等）。- 权限控制：inbound:create、inbound:audit、inbound:cancel、inbound:query。- 入库完成后触发库存预警检查（调用库存预警服务，判断是否低于预警下限或高于预警上限，记录消息）。
+7. 出库管理模块提示词
+请实现出库管理模块（OutboundOrder），要求：- 出库单实体：订单号（规则：OUT+年月日+流水号）、仓库ID、客户、出库类型（销售出库/领料出库/盘亏出库）、关联订单号、操作人、状态（待审核/已完成/已取消）、出库时间、备注。- 出库明细（OutboundOrderItem）：出库单ID、货品ID、应出数量、实出数量、单价、小计。- 业务流程：创建出库单（状态待审核）→ 审核通过 → 扣减对应货品库存（若库存不足则抛出异常并回滚）→ 修改出库单状态为已完成 → 生成库存流水。- 使用 @Transactional 和乐观锁更新库存（version字段），避免超卖。- 接口：创建出库单（预检库存）、审核出库单、取消出库单、分页查询。- 权限：outbound:create, outbound:audit, outbound:cancel, outbound:query。- 出库完成后同样触发库存预警检查。
+8. 库存预警模块提示词
+请实现库存预警模块：- 每日凌晨2点通过 @Scheduled 定时扫描所有货品，检查当前库存是否超出预警范围（低于下限或高于上限）。若触发预警，生成预警记录（StockAlertRecord：货品ID、仓库ID、预警类型（下限/上限）、预警值、实际库存、处理状态（未处理/已处理）、创建时间）。- 提供预警记录的查询接口（分页，可筛选已处理/未处理），以及手动处理预警的接口（标记为已处理，并可填写处理意见）。- 集成 WebSocket 或 Server-Sent Events（SSE）向在线管理员实时推送预警通知（当库存变化触发预警时立即推送）。也可用 Redis 发布订阅。- 另外提供预警阈值批量更新接口（货品导入时更新）。- 权限：alert:query, alert:handle。
+9. 数据可视化看板 API 提示词
+请为看板提供以下 RESTful 统计接口，返回 JSON 数据供前端 ECharts 展示：1. 今日概况：今日入库单数量/出库单数量/总金额（入库金额=明细数量*单价，出库金额同理），当前总库存量（所有货品库存和）。2. 近7天出入库趋势：按天分组统计入库数量/出库数量（或金额）。3. 库存预警统计：各预警类型（下限/上限）的未处理预警数量，以及 Top5 预警次数最多的货品。4. 货品排行榜：按出库数量/入库数量排行（前10名）。5. 仓库库存分布：各仓库的库存总量占比（如果有多个仓库，若无则跳过）。要求使用 Redis 缓存这些统计数据（如缓存1小时），当出入库/库存变动时清除相关缓存。
+10. Redis 缓存与配置提示词
+请配置 Redis 作为缓存和分布式锁。具体要求：- 使用 Spring Cache + RedisCacheManager，针对货品详情（@Cacheable）、用户菜单（@Cacheable）等。- 自定义缓存 key 生成策略，使用 JSON 序列化（Jackson2JsonRedisSerializer）。- 实现 Redis 工具类（RedisUtil）封装 set、get、expire、incr、hset 等常用操作。- 实现分布式锁（Redisson 或基于 setIfAbsent）用于防止并发创建重复订单号/修改库存。- 在登录时将用户权限信息存入 Redis（key: user:perm:userId，value: 权限集合），JWT 过滤器优先从 Redis 读取权限以减轻数据库压力。
+11. 日志与监控提示词
+请集成 SLF4J + Logback，按环境配置日志级别（开发 DEBUG，生产 INFO）。实现操作日志功能：使用 AOP 切面记录关键业务操作（增删改查的敏感操作），记录到数据库（OperationLog：操作人、IP、请求URL、方法、参数、耗时、结果状态）。提供日志查询接口（仅管理员权限）。同时暴露 Actuator 端点（/actuator/health, /actuator/metrics）并配合 Spring Boot Admin 进行监控（可选）。
+
+二、前端开发结构提示词
+1. 项目初始化与基础配置
+请使用 Vue 3 + Vite 创建前端项目。安装以下依赖：vue-router、pinia、axios、element-plus、echarts、dayjs、vite-plugin-style-import（按需导入Element Plus）、@vueuse/core。生成标准目录结构：src/  api/          # 接口模块（按业务划分）  assets/       # 静态资源  components/   # 公共组件（如Layout、Table、Form、Modal）  composables/  # 组合式函数（如useTable、usePagination）  directives/   # 自定义指令（如权限v-permission）  router/       # 路由配置  store/        # pinia状态管理（用户、权限、菜单等）  styles/       # 全局样式  utils/        # 工具函数（request、auth、export）  views/        # 页面视图（按模块划分）  App.vue  main.js配置环境变量（.env.development、.env.production）指定后端API base URL。配置 axios 拦截器（请求自动添加JWT Token，响应统一处理错误码并提示）。实现路由守卫：未登录跳转登录页，登录后根据后端返回的权限动态生成可访问路由（addRoute）。
+2. 布局与主题提示词
+请实现后台管理系统的经典布局：左侧菜单栏（可折叠）、顶部导航栏（面包屑、用户头像下拉菜单、全屏按钮）、标签页（tags-view）支持多标签打开页面。使用 Element Plus 组件搭建。菜单数据从后端动态获取（根据用户权限），支持递归渲染无限级菜单。主题支持亮色/暗色切换，使用 CSS 变量。
+3. 用户登录与权限控制提示词
+实现登录页面 /login，包含用户名/密码表单，记住我（保存账号到localStorage）。调用 /auth/login 接口，成功后存储 token 到 localStorage/pinia，并拉取用户信息（用户名、角色、权限码集合、动态菜单树）。在路由守卫中根据权限码动态添加路由，并使用自定义指令 v-permission 控制按钮级权限（如 v-permission="'product:add'"）。提供退出功能，调用 /auth/logout 清空本地 token 和 store。权限验证失败时跳转403页面。
+4. 货品管理页面提示词
+请生成货品管理页面 /product/list，包含：- 搜索表单：货品编码、名称、类别、状态（下拉选择），搜索/重置按钮。- 表格展示：字段列（编码、名称、规格、类别、当前库存、预警范围、状态、操作），支持列配置（显示/隐藏）。- 分页组件（每页10/20/50/100）。- 操作按钮：新增、编辑、删除（批量）、导入导出Excel。新增/编辑使用 Dialog 表单，表单项包括所有货品字段，需校验（编码唯一性异步校验）。删除需二次确认（逻辑删除）。- 库存调整按钮（弹窗输入调整数量，记录原因）。- 使用 useTable 组合式函数封装表格请求、分页、加载状态。
+5. 入库/出库管理页面提示词
+请分别生成入库单列表页（/inbound/list）和出库单列表页（/outbound/list），结构相似：- 列表展示：订单号、仓库、供应商/客户、类型、操作人、状态（标签颜色区分）、入库/出库时间、操作（查看详情、审核、取消）。待审核的记录显示审核/取消按钮。- 搜索条件：订单号、状态、时间范围。- 新建订单按钮：打开抽屉/弹窗，第一步填写主表信息（仓库、供应商/客户、类型），第二步添加货品明细（支持搜索货品、填写数量/单价、删除行），提交后创建订单。明细需验证库存（出库时预检）。- 查看详情：只读模式展示订单主表和明细表格。- 审核通过/取消二次确认。出库单审核时若库存不足后端返回具体提示，前端展示错误信息。- 使用 el-table 的 selection 进行批量审核/取消。
+6. 库存预警页面提示词
+请实现库存预警页面（/alert/index），包含：- 统计卡片：显示未处理预警总数、今日新增预警数。- 预警记录表格：货品编码、名称、仓库、预警类型、预警阈值、当前库存、状态、创建时间、操作（处理）。支持筛选未处理/已处理。- 实时通知：使用 WebSocket 或轮询接收新预警（例如每30秒请求一次未处理预警数，如有新预警在页面顶部显示通知消息（Element Plus Notification）并刷新表格）。- 预警阈值批量更新页面或弹窗：提供导入Excel批量修改货品预警上下限。- ECharts 迷你图表：展示各货品预警频次。
+7. 数据可视化看板提示词
+请实现仪表盘首页（/dashboard），使用 ECharts 展示以下图表（配合后端API）：1. 指标卡片：今日入库单数/出库单数/入库金额/出库金额/总库存量。2. 折线图：近7天出入库数量趋势。3. 柱状图：货品出库排行榜（前10名）。4. 饼图：各仓库库存占比（若多仓库）。5. 仪表盘或进度条：库存预警占比（预警货品数量/总货品数）。支持刷新按钮，可手动刷新所有图表。使用 echarts 按需引入，窗口尺寸自适应。
+8. 其他公共功能提示词
+请实现以下公共功能：- 全局错误处理：axios 响应拦截器统一处理业务错误码（如401跳转登录、403显示无权限提示）。- 加载进度条：使用 nprogress 在路由跳转和请求时显示顶部进度条。- 水印：为敏感页面添加用户水印（可选的指令）。- 导出 Excel：利用 xlsx 或 file-saver 将表格数据导出为 Excel，支持当前查询结果导出。- 表单通用校验规则：手机号、邮箱、正整数、金额（两位小数）等正则。- 时间格式化：统一使用 dayjs 并配置过滤器。- 动态标题：根据路由设置页面标题。
+9. 构建与部署提示词
+请配置 Vite 生产环境打包优化：代码分割（vendor chunk）、gzip 压缩（vite-plugin-compression）、图片压缩。提供 Dockerfile 和 nginx 配置模板（用于部署前端静态文件）。同时配置前端代理（开发环境代理 /api 到后端服务）。
+
+三、模块联调与测试提示词
+1. API 接口定义与 Mock 数据提示词
+请根据上述模块后端接口规范，生成完整的 API 接口文档（Swagger 风格）以及 Postman 集合的 JSON 文件。同时为前端独立开发提供 Mock 数据：使用 Mock.js 或 vite-plugin-mock 模拟所有后端接口，确保前端在不启动后端的情况下可以模拟所有业务场景（登录、CRUD、预警、看板等）。
+2. 集成测试与部署提示词
+请编写后端单元测试（JUnit5 + Mockito）测试核心业务服务（入库、出库、库存预警）。使用 Testcontainers 进行 MySQL/Redis 集成测试。前端使用 Vitest 编写组件测试（如表单验证、按钮权限）。最后提供 docker-compose.yml 一键启动 MySQL、Redis、后端（Spring Boot 镜像）、前端（Nginx 镜像）。

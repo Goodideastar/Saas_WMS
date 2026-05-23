@@ -1,0 +1,80 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e41]:
+    - complementary [ref=e42]:
+      - heading "WMS 仓储管理" [level=2] [ref=e44]
+      - menubar [ref=e45]:
+        - menuitem "数据看板" [ref=e46] [cursor=pointer]:
+          - img [ref=e48]
+          - text: 数据看板
+        - menuitem "货品管理" [ref=e52] [cursor=pointer]:
+          - img [ref=e54]
+          - text: 货品管理
+        - menuitem "入库管理" [ref=e58] [cursor=pointer]:
+          - img [ref=e60]
+          - text: 入库管理
+        - menuitem "出库管理" [ref=e62] [cursor=pointer]:
+          - img [ref=e64]
+          - text: 出库管理
+        - menuitem "库存预警" [ref=e66] [cursor=pointer]:
+          - img [ref=e68]
+          - text: 库存预警
+    - generic [ref=e70]:
+      - generic [ref=e71]:
+        - generic [ref=e72]:
+          - img [ref=e74] [cursor=pointer]
+          - navigation "面包屑" [ref=e76]:
+            - generic [ref=e77]:
+              - link "首页" [ref=e78]
+              - text: /
+            - link "数据看板" [ref=e80]
+        - button "admin" [ref=e83] [cursor=pointer]:
+          - img [ref=e86]
+          - generic [ref=e88]: admin
+      - main [ref=e89]:
+        - generic [ref=e90]:
+          - generic [ref=e91]:
+            - generic [ref=e93]:
+              - generic [ref=e94]: 今日入库单数
+              - generic [ref=e96]: "0"
+            - generic [ref=e98]:
+              - generic [ref=e99]: 今日出库单数
+              - generic [ref=e101]: "0"
+            - generic [ref=e103]:
+              - generic [ref=e104]: 今日入库金额
+              - generic [ref=e106]: ¥0
+            - generic [ref=e108]:
+              - generic [ref=e109]: 今日出库金额
+              - generic [ref=e111]: ¥0
+            - generic [ref=e113]:
+              - generic [ref=e114]: 总库存量
+              - generic [ref=e116]: "0"
+            - generic [ref=e118]:
+              - generic [ref=e119]: 未处理预警
+              - generic [ref=e121]: "0"
+          - generic [ref=e122]:
+            - generic [ref=e126]:
+              - generic [ref=e127]: 近7天出入库趋势
+              - button "刷新" [ref=e128] [cursor=pointer]:
+                - generic [ref=e129]: 刷新
+            - generic [ref=e134]: 货品出库排行榜 (Top 10)
+          - generic [ref=e137]:
+            - generic [ref=e140]: 库存预警统计
+            - generic [ref=e145]: 仓库库存分布
+  - alert [ref=e148]:
+    - img [ref=e150]
+    - paragraph [ref=e152]: 登录成功
+  - alert [ref=e153]:
+    - img [ref=e155]
+    - paragraph [ref=e157]: 服务器错误
+  - alert [ref=e158]:
+    - img [ref=e160]
+    - paragraph [ref=e162]: 服务器错误
+  - alert [ref=e163]:
+    - img [ref=e165]
+    - paragraph [ref=e167]: 服务器错误
+  - alert [ref=e168]:
+    - img [ref=e170]
+    - paragraph [ref=e172]: 服务器错误
+  - alert [ref=e173]:
+    - img [ref=e175]
+    - paragraph [ref=e177]: 服务器错误

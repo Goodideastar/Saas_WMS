@@ -1,0 +1,19 @@
+# Docker 相关
+.dockerignore
+.env
+*.log
+
+# 构建产物
+target/
+*.jar
+dist/
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# 操作系统
+.DS_Store
+Thumbs.db

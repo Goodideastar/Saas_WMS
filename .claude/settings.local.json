@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn compile *)",
+      "Bash(npm run *)",
+      "Bash(netstat -ano)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "Bash(curl -s http://localhost:8080/api/auth/info)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(mvn spring-boot:run)"
+    ]
+  }
+}

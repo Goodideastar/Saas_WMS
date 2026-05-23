@@ -1,0 +1,61 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - heading "WMS 仓储管理" [level=2] [ref=e6]
+    - menubar [ref=e7]:
+      - menuitem "数据看板" [ref=e8] [cursor=pointer]:
+        - img [ref=e10]
+        - text: 数据看板
+      - menuitem "货品管理" [ref=e14] [cursor=pointer]:
+        - img [ref=e16]
+        - text: 货品管理
+      - menuitem "入库管理" [ref=e20] [cursor=pointer]:
+        - img [ref=e22]
+        - text: 入库管理
+      - menuitem "出库管理" [ref=e24] [cursor=pointer]:
+        - img [ref=e26]
+        - text: 出库管理
+      - menuitem "库存预警" [ref=e28] [cursor=pointer]:
+        - img [ref=e30]
+        - text: 库存预警
+  - generic [ref=e32]:
+    - generic [ref=e33]:
+      - generic [ref=e34]:
+        - img [ref=e36] [cursor=pointer]
+        - navigation "面包屑" [ref=e38]:
+          - generic [ref=e39]:
+            - link "首页" [ref=e40]
+            - text: /
+          - link "数据看板" [ref=e42]
+      - button "admin" [ref=e45] [cursor=pointer]:
+        - img [ref=e48]
+        - generic [ref=e50]: admin
+    - main [ref=e51]:
+      - generic [ref=e52]:
+        - generic [ref=e53]:
+          - generic [ref=e55]:
+            - generic [ref=e56]: 今日入库单数
+            - generic [ref=e58]: "0"
+          - generic [ref=e60]:
+            - generic [ref=e61]: 今日出库单数
+            - generic [ref=e63]: "0"
+          - generic [ref=e65]:
+            - generic [ref=e66]: 今日入库金额
+            - generic [ref=e68]: ¥0
+          - generic [ref=e70]:
+            - generic [ref=e71]: 今日出库金额
+            - generic [ref=e73]: ¥0
+          - generic [ref=e75]:
+            - generic [ref=e76]: 总库存量
+            - generic [ref=e78]: "0"
+          - generic [ref=e80]:
+            - generic [ref=e81]: 未处理预警
+            - generic [ref=e83]: "0"
+        - generic [ref=e84]:
+          - generic [ref=e88]:
+            - generic [ref=e89]: 近7天出入库趋势
+            - button "刷新" [ref=e90] [cursor=pointer]:
+              - generic [ref=e91]: 刷新
+          - generic [ref=e96]: 货品出库排行榜 (Top 10)
+        - generic [ref=e99]:
+          - generic [ref=e102]: 库存预警统计
+          - generic [ref=e107]: 仓库库存分布
