@@ -3,9 +3,9 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# 优化 npm 缓存
+# 安装所有依赖（包括 devDependencies，因为 vite 是开发依赖）
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 # 复制源代码
 COPY . .
