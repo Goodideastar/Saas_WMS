@@ -20,6 +20,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -31,9 +32,9 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     @Override
     public IPage<ProductVo> pageQuery(ProductQueryDto queryDto) {
         LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(queryDto.getProductCode() != null, Product::getProductCode, queryDto.getProductCode())
-                .like(queryDto.getProductName() != null, Product::getProductName, queryDto.getProductName())
-                .eq(queryDto.getCategory() != null, Product::getCategory, queryDto.getCategory())
+        wrapper.like(StringUtils.hasText(queryDto.getProductCode()), Product::getProductCode, queryDto.getProductCode())
+                .like(StringUtils.hasText(queryDto.getProductName()), Product::getProductName, queryDto.getProductName())
+                .eq(StringUtils.hasText(queryDto.getCategory()), Product::getCategory, queryDto.getCategory())
                 .eq(queryDto.getStatus() != null, Product::getStatus, queryDto.getStatus())
                 .orderByDesc(Product::getCreateTime);
 

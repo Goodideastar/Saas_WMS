@@ -4,10 +4,11 @@ import { login, logout, getUserInfo as fetchUserInfo } from '@/api/auth'
 import { getToken, setToken, removeToken, getUserInfo, setUserInfo, removeUserInfo } from '@/utils/auth'
 
 export const useUserStore = defineStore('user', () => {
+  const storedUserInfo = getUserInfo()
   const token = ref(getToken() || '')
-  const userInfo = ref(getUserInfo() || null)
-  const permissions = ref([])
-  const menuTree = ref([])
+  const userInfo = ref(storedUserInfo || null)
+  const permissions = ref(storedUserInfo?.permissions || [])
+  const menuTree = ref(storedUserInfo?.menuTree || [])
 
   async function loginAction(loginForm) {
     const res = await login(loginForm)

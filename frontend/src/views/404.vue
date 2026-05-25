@@ -1,19 +1,51 @@
 <template>
   <div class="error-page">
-    <h1>404</h1>
-    <p>抱歉，您访问的页面不存在</p>
-    <el-button type="primary" @click="$router.push('/')">返回首页</el-button>
+    <div class="error-code">404</div>
+    <div class="error-divider"></div>
+    <h2>页面不存在</h2>
+    <p>您访问的页面不存在或已被移除</p>
+    <el-button type="primary" size="large" @click="$router.push('/')">返回首页</el-button>
   </div>
 </template>
 
 <style scoped>
 .error-page {
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  background: var(--color-bg);
 }
-h1 { font-size: 72px; color: #409EFF; margin: 0; }
-p { color: #666; margin: 20px 0; }
+
+.error-code {
+  font-family: var(--font-display);
+  font-size: 8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.error-divider {
+  width: 48px;
+  height: 3px;
+  background: var(--color-primary);
+  border-radius: 2px;
+  margin: 24px 0;
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+
+p {
+  font-size: var(--font-base);
+  color: var(--text-secondary);
+  margin: 0 0 32px;
+}
 </style>

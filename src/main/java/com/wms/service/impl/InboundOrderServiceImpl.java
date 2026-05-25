@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -58,7 +59,7 @@ public class InboundOrderServiceImpl extends ServiceImpl<InboundOrderMapper, Inb
         order.setSupplier(dto.getSupplier());
         order.setInboundType(dto.getInboundType());
         order.setRelatedOrderNo(dto.getRelatedOrderNo());
-        order.setStatus("pending");
+        order.setStatus("PENDING");
         order.setRemark(dto.getRemark());
         inboundOrderMapper.insert(order);
 
@@ -96,7 +97,7 @@ public class InboundOrderServiceImpl extends ServiceImpl<InboundOrderMapper, Inb
                 order.getOrderNo(), order.getWarehouseId(), order.getSupplier(),
                 order.getInboundType(), order.getStatus());
 
-        if (!"pending".equals(order.getStatus())) {
+        if (!"PENDING".equals(order.getStatus())) {
             logger.error("[InboundAudit] Order status not allowed for audit - OrderNo: {}, CurrentStatus: {}",
                     order.getOrderNo(), order.getStatus());
             throw new BusinessException(400, "Order status not allowed for audit");
@@ -160,7 +161,7 @@ public class InboundOrderServiceImpl extends ServiceImpl<InboundOrderMapper, Inb
             stockAlertService.checkAndCreateAlerts(product.getId());
         }
 
-        order.setStatus("completed");
+        order.setStatus("COMPLETED");
         order.setInboundTime(LocalDateTime.now());
         inboundOrderMapper.updateById(order);
         logger.info("[InboundAudit] Order status updated to 'completed', InboundTime: {}", order.getInboundTime());
@@ -174,19 +175,19 @@ public class InboundOrderServiceImpl extends ServiceImpl<InboundOrderMapper, Inb
         if (order == null) {
             throw new BusinessException(404, "Inbound order not found");
         }
-        if (!"pending".equals(order.getStatus())) {
+        if (!"PENDING".equals(order.getStatus())) {
             throw new BusinessException(400, "Order status not allowed for cancellation");
         }
 
-        order.setStatus("cancelled");
+        order.setStatus("CANCELLED");
         inboundOrderMapper.updateById(order);
     }
 
     @Override
     public IPage<InboundOrderVo> pageQuery(InboundOrderQueryDto queryDto) {
         LambdaQueryWrapper<InboundOrder> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(queryDto.getOrderNo() != null, InboundOrder::getOrderNo, queryDto.getOrderNo())
-                .eq(queryDto.getStatus() != null, InboundOrder::getStatus, queryDto.getStatus())
+        wrapper.like(StringUtils.hasText(queryDto.getOrderNo()), InboundOrder::getOrderNo, queryDto.getOrderNo())
+                .eq(StringUtils.hasText(queryDto.getStatus()), InboundOrder::getStatus, queryDto.getStatus())
                 .ge(queryDto.getStartTime() != null, InboundOrder::getCreateTime, queryDto.getStartTime())
                 .le(queryDto.getEndTime() != null, InboundOrder::getCreateTime, queryDto.getEndTime())
                 .orderByDesc(InboundOrder::getCreateTime);

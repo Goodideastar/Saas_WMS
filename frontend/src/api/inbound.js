@@ -18,14 +18,14 @@ export function createInbound(data) {
 
 export function auditInbound(id) {
   return request({
-    url: `/inbound/${id}/audit`,
+    url: `/inbound/audit/${id}`,
     method: 'put'
   })
 }
 
 export function cancelInbound(id) {
   return request({
-    url: `/inbound/${id}/cancel`,
+    url: `/inbound/cancel/${id}`,
     method: 'put'
   })
 }

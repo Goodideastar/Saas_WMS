@@ -24,7 +24,7 @@
     <el-card>
       <el-form :inline="true" :model="queryForm" class="search-form">
         <el-form-item label="处理状态">
-          <el-select v-model="queryForm.status" placeholder="请选择" clearable>
+          <el-select v-model="queryForm.status" placeholder="请选择" clearable style="width: 110px">
             <el-option label="未处理" value="UNHANDLED" />
             <el-option label="已处理" value="HANDLED" />
           </el-select>
@@ -148,11 +148,22 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.mb-20 { margin-bottom: 20px; }
-.stat-value { font-size: 28px; font-weight: bold; text-align: center; padding: 10px 0; }
-.text-danger { color: #f56c6c; }
-.text-warning { color: #e6a23c; }
-.text-success { color: #67c23a; }
-.search-form { margin-bottom: 16px; }
-.pagination-wrapper { margin-top: 16px; display: flex; justify-content: flex-end; }
+.alert-list {
+  max-width: 1400px;
+}
+.mb-20 { margin-bottom: var(--space-lg); }
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 10px 0;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.text-danger { color: var(--color-danger); }
+.text-warning { color: var(--color-warning); }
+.text-success { color: var(--color-success); }
+.search-form { margin-bottom: var(--space-md); }
+.pagination-wrapper { margin-top: var(--space-md); display: flex; justify-content: flex-end; }
 </style>

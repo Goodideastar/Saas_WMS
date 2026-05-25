@@ -6,7 +6,7 @@
           <el-input v-model="queryForm.orderNo" placeholder="请输入" clearable />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="queryForm.status" placeholder="请选择" clearable>
+          <el-select v-model="queryForm.status" placeholder="请选择" clearable style="width: 120px">
             <el-option label="待审核" value="PENDING" />
             <el-option label="已完成" value="COMPLETED" />
             <el-option label="已取消" value="CANCELLED" />
@@ -35,7 +35,9 @@
             <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="inboundTime" label="入库时间" />
+        <el-table-column label="入库时间">
+          <template #default="{ row }">{{ row.inboundTime ? row.inboundTime.replace('T', ' ') : '' }}</template>
+        </el-table-column>
         <el-table-column label="操作" width="220">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleDetail(row)">查看</el-button>
@@ -92,24 +94,23 @@
           <el-table-column label="货品" width="200">
             <template #default="{ row }">
               <el-select v-model="row.productId" filterable placeholder="搜索货品">
-                <el-option label="示例货品A" :value="1" />
-                <el-option label="示例货品B" :value="2" />
+                <el-option v-for="p in productList" :key="p.id" :label="p.productCode + ' - ' + p.productName" :value="p.id" />
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column label="应入数量">
+          <el-table-column label="应入数量" width="150">
             <template #default="{ row }">
-              <el-input-number v-model="row.expectedQuantity" :min="1" />
+              <el-input-number v-model="row.expectedQuantity" :min="1" controls-position="right" style="width: 130px" />
             </template>
           </el-table-column>
-          <el-table-column label="实入数量">
+          <el-table-column label="实入数量" width="150">
             <template #default="{ row }">
-              <el-input-number v-model="row.actualQuantity" :min="0" />
+              <el-input-number v-model="row.actualQuantity" :min="0" controls-position="right" style="width: 130px" />
             </template>
           </el-table-column>
-          <el-table-column label="单价">
+          <el-table-column label="单价" width="150">
             <template #default="{ row }">
-              <el-input-number v-model="row.unitPrice" :min="0" :precision="2" />
+              <el-input-number v-model="row.unitPrice" :min="0" :precision="2" controls-position="right" style="width: 130px" />
             </template>
           </el-table-column>
           <el-table-column label="小计">
@@ -138,11 +139,13 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { getInboundPage, createInbound, auditInbound, cancelInbound } from '@/api/inbound.js'
+import { getProductPage } from '@/api/product.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const loading = ref(false)
 const tableData = ref([])
 const dialogVisible = ref(false)
+const productList = ref([])
 const pagination = reactive({ pageNum: 1, pageSize: 10, total: 0 })
 const queryForm = reactive({ orderNo: '', status: '', dateRange: null })
 const orderForm = reactive({ warehouseId: null, supplier: '', inboundType: '', relatedOrderNo: '', remark: '', items: [] })
@@ -150,6 +153,11 @@ const orderForm = reactive({ warehouseId: null, supplier: '', inboundType: '', r
 const statusMap = { PENDING: { text: '待审核', type: 'warning' }, COMPLETED: { text: '已完成', type: 'success' }, CANCELLED: { text: '已取消', type: 'info' } }
 function getStatusType(s) { return statusMap[s]?.type || '' }
 function getStatusText(s) { return statusMap[s]?.text || s }
+
+async function loadProducts() {
+  const res = await getProductPage({ pageNum: 1, pageSize: 200, status: 1 })
+  productList.value = res.data.records || []
+}
 
 async function loadData() {
   loading.value = true
@@ -164,7 +172,7 @@ async function loadData() {
 
 function handleSearch() { pagination.pageNum = 1; loadData() }
 function handleReset() { Object.assign(queryForm, { orderNo: '', status: '', dateRange: null }); handleSearch() }
-function handleCreate() { Object.assign(orderForm, { warehouseId: 1, supplier: '', inboundType: '', relatedOrderNo: '', remark: '', items: [{ productId: null, expectedQuantity: 1, actualQuantity: 0, unitPrice: 0 }] }); dialogVisible.value = true }
+function handleCreate() { Object.assign(orderForm, { warehouseId: 1, supplier: '', inboundType: '', relatedOrderNo: '', remark: '', items: [{ productId: null, expectedQuantity: 1, actualQuantity: 0, unitPrice: 0 }] }); loadProducts(); dialogVisible.value = true }
 
 async function handleSubmit() {
   await createInbound(orderForm)
@@ -193,7 +201,10 @@ onMounted(() => loadData())
 </script>
 
 <style scoped>
-.search-form { margin-bottom: 16px; }
-.toolbar { margin-bottom: 16px; }
-.pagination-wrapper { margin-top: 16px; display: flex; justify-content: flex-end; }
+.inbound-list {
+  max-width: 1400px;
+}
+.search-form { margin-bottom: var(--space-md); }
+.toolbar { margin-bottom: var(--space-md); }
+.pagination-wrapper { margin-top: var(--space-md); display: flex; justify-content: flex-end; }
 </style>

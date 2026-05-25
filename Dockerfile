@@ -24,8 +24,10 @@ LABEL maintainer="wms-team"
 LABEL version="1.0.0"
 LABEL description="WMS Backend Service"
 
-# 设置时区
+# 设置时区和字符编码
 ENV TZ=Asia/Shanghai
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
 RUN apk add --no-cache tzdata \
     && cp /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone \
@@ -59,5 +61,7 @@ ENTRYPOINT ["java", \
   "-XX:HeapDumpPath=/app/logs/heapdump.hprof", \
   "-Xms256m", \
   "-Xmx512m", \
+  "-Dfile.encoding=UTF-8", \
+  "-Dsun.jnu.encoding=UTF-8", \
   "-Djava.security.egd=file:/dev/./urandom", \
   "-jar", "app.jar"]

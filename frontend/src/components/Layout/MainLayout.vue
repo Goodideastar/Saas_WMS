@@ -1,74 +1,102 @@
 <template>
-  <el-container class="layout-container">
-    <el-aside :width="isCollapse ? '64px' : '220px'" class="aside">
-      <div class="logo">
-        <h2 v-if="!isCollapse">WMS 仓储管理</h2>
-        <h2 v-else>W</h2>
+  <el-container class="layout-root">
+    <el-aside :width="isCollapse ? '64px' : '240px'" class="layout-aside">
+      <div class="aside-header">
+        <div class="aside-logo">
+          <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" class="logo-icon">
+            <rect x="4" y="10" width="28" height="20" rx="2" stroke="currentColor" stroke-width="2"/>
+            <path d="M4 16h28" stroke="currentColor" stroke-width="2"/>
+            <rect x="7" y="6" width="4" height="4" rx="0.5" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="25" y="6" width="4" height="4" rx="0.5" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <transition name="fade">
+          <span v-if="!isCollapse" class="aside-title">WMS</span>
+        </transition>
       </div>
-      <el-menu
-        :default-active="activeMenu"
-        :collapse="isCollapse"
-        :collapse-transition="false"
-        router
-        background-color="#304156"
-        text-color="#bfcbd9"
-        active-text-color="#409EFF"
-      >
-        <el-menu-item index="/dashboard">
-          <el-icon><DataBoard /></el-icon>
-          <template #title>数据看板</template>
-        </el-menu-item>
-        <el-menu-item index="/product/list">
-          <el-icon><Box /></el-icon>
-          <template #title>货品管理</template>
-        </el-menu-item>
-        <el-menu-item index="/inbound/list">
-          <el-icon><Download /></el-icon>
-          <template #title>入库管理</template>
-        </el-menu-item>
-        <el-menu-item index="/outbound/list">
-          <el-icon><Upload /></el-icon>
-          <template #title>出库管理</template>
-        </el-menu-item>
-        <el-menu-item index="/alert/index">
-          <el-icon><Warning /></el-icon>
-          <template #title>库存预警</template>
-        </el-menu-item>
-      </el-menu>
+
+      <div class="aside-nav">
+        <el-menu
+          :default-active="activeMenu"
+          :collapse="isCollapse"
+          :collapse-transition="false"
+          router
+          background-color="transparent"
+          text-color="#94a3b8"
+          active-text-color="#e2e8f0"
+        >
+          <el-menu-item index="/dashboard">
+            <el-icon><DataBoard /></el-icon>
+            <template #title>数据看板</template>
+          </el-menu-item>
+          <el-menu-item index="/product/list">
+            <el-icon><Box /></el-icon>
+            <template #title>货品管理</template>
+          </el-menu-item>
+          <el-menu-item index="/inbound/list">
+            <el-icon><Download /></el-icon>
+            <template #title>入库管理</template>
+          </el-menu-item>
+          <el-menu-item index="/outbound/list">
+            <el-icon><Upload /></el-icon>
+            <template #title>出库管理</template>
+          </el-menu-item>
+          <el-menu-item index="/alert/index">
+            <el-icon><Warning /></el-icon>
+            <template #title>库存预警</template>
+          </el-menu-item>
+        </el-menu>
+      </div>
+
+      <div class="aside-footer" v-if="!isCollapse">
+        <div class="status-dot"></div>
+        <span class="status-text">System Online</span>
+      </div>
     </el-aside>
 
-    <el-container>
-      <el-header class="header">
+    <el-container class="layout-main">
+      <el-header class="layout-header">
         <div class="header-left">
-          <el-icon class="collapse-btn" @click="isCollapse = !isCollapse">
-            <Fold v-if="!isCollapse" />
-            <Expand v-else />
-          </el-icon>
-          <el-breadcrumb separator="/">
-            <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-            <el-breadcrumb-item v-if="route.meta.title">{{ route.meta.title }}</el-breadcrumb-item>
+          <button class="collapse-trigger" @click="isCollapse = !isCollapse">
+            <el-icon :size="18"><Fold v-if="!isCollapse" /><Expand v-else /></el-icon>
+          </button>
+          <el-breadcrumb separator="">
+            <el-breadcrumb-item :to="{ path: '/dashboard' }">
+              <el-icon :size="14"><HomeFilled /></el-icon>
+            </el-breadcrumb-item>
+            <el-breadcrumb-item v-if="route.meta.title">
+              <span class="breadcrumb-current">{{ route.meta.title }}</span>
+            </el-breadcrumb-item>
           </el-breadcrumb>
         </div>
+
         <div class="header-right">
+          <button class="header-btn" title="全屏">
+            <el-icon :size="16"><FullScreen /></el-icon>
+          </button>
           <el-dropdown trigger="click" @command="handleCommand">
-            <span class="user-info">
-              <el-avatar :size="32">
+            <div class="user-badge">
+              <el-avatar :size="32" class="user-avatar">
                 <el-icon><UserFilled /></el-icon>
               </el-avatar>
-              <span class="username">{{ userInfo?.username || '管理员' }}</span>
-            </span>
+              <span class="user-name">{{ userInfo?.username || '管理员' }}</span>
+              <el-icon :size="12" class="user-chevron"><ArrowDown /></el-icon>
+            </div>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+                <el-dropdown-item command="logout">
+                  <el-icon><SwitchButton /></el-icon>
+                  退出登录
+                </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
         </div>
       </el-header>
 
-      <el-main class="main-content">
+      <el-main class="layout-content">
         <router-view v-slot="{ Component }">
-          <transition name="fade" mode="out-in">
+          <transition name="fade-slide" mode="out-in">
             <component :is="Component" />
           </transition>
         </router-view>
@@ -81,7 +109,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
-import { UserFilled } from '@element-plus/icons-vue'
+import { HomeFilled, UserFilled, ArrowDown, SwitchButton, FullScreen } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -100,68 +128,236 @@ async function handleCommand(command) {
 </script>
 
 <style scoped>
-.layout-container {
+.layout-root {
   height: 100vh;
+  background: var(--color-bg);
 }
-.aside {
-  background-color: #304156;
-  transition: width 0.3s;
+
+/* === Aside === */
+
+.layout-aside {
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  transition: width var(--transition-slow);
   overflow: hidden;
+  position: relative;
 }
-.logo {
-  height: 60px;
+
+.layout-aside::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.aside-header {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+
+.aside-logo {
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #263445;
-  color: #fff;
-  font-size: 18px;
+  flex-shrink: 0;
 }
-.logo h2 {
-  margin: 0;
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  color: #60a5fa;
+}
+
+.aside-title {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  letter-spacing: 0.06em;
   white-space: nowrap;
 }
-.header {
+
+.aside-nav {
+  flex: 1;
+  padding: 8px 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.aside-nav :deep(.el-menu) {
+  background: transparent;
+}
+
+.aside-nav :deep(.el-menu-item) {
+  margin: 2px 8px;
+  border-radius: var(--radius-sm);
+  height: 42px;
+  line-height: 42px;
+  font-size: var(--font-base);
+  font-weight: 500;
+  color: var(--sidebar-text);
+  transition: all var(--transition-fast);
+}
+
+.aside-nav :deep(.el-menu-item:hover) {
+  background: var(--sidebar-bg-hover);
+  color: #cbd5e1;
+}
+
+.aside-nav :deep(.el-menu-item.is-active) {
+  background: rgba(37, 99, 235, 0.2);
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.aside-nav :deep(.el-menu-item .el-icon) {
+  font-size: 18px;
+}
+
+.aside-footer {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+  flex-shrink: 0;
+}
+
+.status-text {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* === Header === */
+
+.layout-main {
+  flex-direction: column;
+  min-width: 0;
+}
+
+.layout-header {
+  height: var(--header-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0,21,41,0.08);
+  background: var(--color-bg-card);
+  border-bottom: 1px solid var(--color-border);
   padding: 0 20px;
+  flex-shrink: 0;
+  z-index: 10;
 }
+
 .header-left {
   display: flex;
   align-items: center;
   gap: 16px;
 }
-.collapse-btn {
+
+.collapse-trigger {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
   cursor: pointer;
-  font-size: 20px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
 }
+
+.collapse-trigger:hover {
+  background: var(--color-bg);
+  color: var(--text-primary);
+}
+
+.breadcrumb-current {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
 .header-right {
   display: flex;
   align-items: center;
+  gap: 8px;
 }
-.user-info {
+
+.header-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.header-btn:hover {
+  background: var(--color-bg);
+  color: var(--text-primary);
+}
+
+.user-badge {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 4px 8px 4px 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
+  transition: background var(--transition-fast);
 }
-.username {
-  font-size: 14px;
-  color: #333;
+
+.user-badge:hover {
+  background: var(--color-bg);
 }
-.main-content {
-  background: #f0f2f5;
-  padding: 20px;
+
+.user-avatar {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
 }
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
+
+.user-name {
+  font-size: var(--font-sm);
+  font-weight: 500;
+  color: var(--text-primary);
 }
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
+
+.user-chevron {
+  color: var(--text-muted);
+}
+
+/* === Content === */
+
+.layout-content {
+  padding: var(--space-lg);
+  background: var(--color-bg);
+  overflow-y: auto;
+  flex: 1;
 }
 </style>

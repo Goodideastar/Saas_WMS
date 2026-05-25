@@ -12,7 +12,7 @@
           <el-input v-model="queryForm.category" placeholder="请输入" clearable />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="queryForm.status" placeholder="请选择" clearable>
+          <el-select v-model="queryForm.status" placeholder="请选择" clearable style="width: 100px">
             <el-option label="启用" :value="1" />
             <el-option label="禁用" :value="0" />
           </el-select>
@@ -83,16 +83,16 @@
           <el-input v-model="formData.category" />
         </el-form-item>
         <el-form-item label="参考进价">
-          <el-input-number v-model="formData.referenceCost" :precision="2" :min="0" />
+          <el-input-number v-model="formData.referenceCost" :precision="2" :min="0" controls-position="right" style="width: 180px" />
         </el-form-item>
         <el-form-item label="参考售价">
-          <el-input-number v-model="formData.referencePrice" :precision="2" :min="0" />
+          <el-input-number v-model="formData.referencePrice" :precision="2" :min="0" controls-position="right" style="width: 180px" />
         </el-form-item>
         <el-form-item label="预警下限">
-          <el-input-number v-model="formData.alertMin" :min="0" />
+          <el-input-number v-model="formData.alertMin" :min="0" controls-position="right" style="width: 180px" />
         </el-form-item>
         <el-form-item label="预警上限">
-          <el-input-number v-model="formData.alertMax" :min="0" />
+          <el-input-number v-model="formData.alertMax" :min="0" controls-position="right" style="width: 180px" />
         </el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="formData.status">
@@ -119,7 +119,7 @@
           <span>{{ stockForm.currentStock }}</span>
         </el-form-item>
         <el-form-item label="调整数量" prop="quantity">
-          <el-input-number v-model="stockForm.quantity" :min="-99999" />
+          <el-input-number v-model="stockForm.quantity" :min="-99999" controls-position="right" style="width: 180px" />
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="stockForm.remark" type="textarea" :rows="2" />
@@ -223,7 +223,10 @@ onMounted(() => loadData())
 </script>
 
 <style scoped>
-.search-form { margin-bottom: 16px; }
-.toolbar { margin-bottom: 16px; }
-.pagination-wrapper { margin-top: 16px; display: flex; justify-content: flex-end; }
+.product-list {
+  max-width: 1400px;
+}
+.search-form { margin-bottom: var(--space-md); }
+.toolbar { margin-bottom: var(--space-md); }
+.pagination-wrapper { margin-top: var(--space-md); display: flex; justify-content: flex-end; }
 </style>

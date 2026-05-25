@@ -1,19 +1,51 @@
 <template>
   <div class="error-page">
-    <h1>403</h1>
-    <p>抱歉，您没有权限访问该页面</p>
-    <el-button type="primary" @click="$router.push('/')">返回首页</el-button>
+    <div class="error-code">403</div>
+    <div class="error-divider"></div>
+    <h2>访问被拒绝</h2>
+    <p>您没有权限访问此页面，请联系管理员</p>
+    <el-button type="primary" size="large" @click="$router.push('/')">返回首页</el-button>
   </div>
 </template>
 
 <style scoped>
 .error-page {
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  background: var(--color-bg);
 }
-h1 { font-size: 72px; color: #409EFF; margin: 0; }
-p { color: #666; margin: 20px 0; }
+
+.error-code {
+  font-family: var(--font-display);
+  font-size: 8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.error-divider {
+  width: 48px;
+  height: 3px;
+  background: var(--color-danger);
+  border-radius: 2px;
+  margin: 24px 0;
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+
+p {
+  font-size: var(--font-base);
+  color: var(--text-secondary);
+  margin: 0 0 32px;
+}
 </style>

@@ -41,6 +41,8 @@ services:
 
   backend:
     environment:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}

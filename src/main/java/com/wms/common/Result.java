@@ -52,12 +52,11 @@ public class Result<T> implements Serializable {
         return result;
     }
 
-    public static <T> Result<T> page(T data, Long total) {
-        Result<T> result = new Result<>();
+    public static <T> Result<PageResult<T>> page(T data, Long total) {
+        Result<PageResult<T>> result = new Result<>();
         result.setCode(200);
         result.setMessage("查询成功");
-        PageResult<T> pageResult = new PageResult<>(data, total);
-        result.setData((T) pageResult);
+        result.setData(new PageResult<>(data, total));
         return result;
     }
 
