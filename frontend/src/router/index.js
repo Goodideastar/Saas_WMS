@@ -62,6 +62,12 @@ const asyncRoutes = [
         name: 'AlertList',
         component: () => import('@/views/alert/AlertList.vue'),
         meta: { title: '库存预警', icon: 'Warning', permission: 'alert:query' }
+      },
+      {
+        path: 'ai-dashboard',
+        name: 'AiDashboard',
+        component: () => import('@/views/AiDashboard.vue'),
+        meta: { title: 'AI分析', icon: 'cpu' }
       }
     ]
   },
