@@ -103,6 +103,8 @@
       </el-main>
     </el-container>
   </el-container>
+<AiChatTrigger :open="aiPanelOpen" @toggle="aiPanelOpen = !aiPanelOpen" />
+<AiChatPanel :visible="aiPanelOpen" @close="aiPanelOpen = false" />
 </template>
 
 <script setup>
@@ -110,12 +112,15 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { HomeFilled, UserFilled, ArrowDown, SwitchButton, FullScreen } from '@element-plus/icons-vue'
+import AiChatTrigger from '@/components/AiChat/AiChatTrigger.vue'
+import AiChatPanel from '@/components/AiChat/AiChatPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
 const isCollapse = ref(false)
+const aiPanelOpen = ref(false)
 const activeMenu = computed(() => route.path)
 const userInfo = computed(() => userStore.userInfo)
 
