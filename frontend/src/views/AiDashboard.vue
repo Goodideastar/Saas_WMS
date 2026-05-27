@@ -48,7 +48,7 @@ const analyze = async () => {
   if (!query.value.trim() || loading.value) return
   loading.value = true
   result.value = null
-  const resp = await fetch('http://localhost:8090/ai/analysis', {
+  const resp = await fetch('/ai/analysis', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userStore.token}` },
     body: JSON.stringify({ query: query.value }),

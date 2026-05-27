@@ -7,7 +7,23 @@
       "mcp__plugin_playwright_playwright__browser_navigate",
       "Bash(curl -s http://localhost:8080/api/auth/info)",
       "Bash(curl -s http://localhost:3000)",
-      "Bash(mvn spring-boot:run)"
+      "Bash(mvn spring-boot:run)",
+      "Skill(superpowers:brainstorming)",
+      "Bash(node -e \"const icons = require\\('@element-plus/icons-vue'\\); const names = ['Coin','Money','HomeFilled','ArrowDown','SwitchButton','FullScreen','Refresh','User','Lock','DataBoard','Box','Download','Upload','Warning','Fold','Expand']; names.forEach\\(n => console.log\\(n + ': ' + \\(n in icons ? 'OK' : 'MISSING'\\)\\)\\)\")",
+      "Bash(curl -s http://localhost:8080/actuator/health)",
+      "Bash(npx vite *)",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "mcp__plugin_playwright_playwright__browser_console_messages",
+      "Bash(find /tmp -name \"login-page.png\")",
+      "Bash(find /home -name \"login-page.png\")",
+      "Bash(mvn spring-boot:run -q)",
+      "Bash(curl -s --connect-timeout 3 http://192.168.182.128:3306)",
+      "Bash(curl -s --connect-timeout 3 http://192.168.182.128:6379)",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "mcp__plugin_playwright_playwright__browser_close",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }

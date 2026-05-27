@@ -44,7 +44,7 @@ const send = async () => {
   const assistantMsg = { role: 'assistant', content: '', toolCalls: [] }
   messages.value.push(assistantMsg)
 
-  const resp = await fetch('http://localhost:8090/ai/chat', {
+  const resp = await fetch('/ai/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userStore.token}` },
     body: JSON.stringify({ message: text, session_id: 'default' }),
