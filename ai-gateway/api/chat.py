@@ -19,11 +19,16 @@ async def chat(req: ChatRequest, request: Request):
             await session_store.append(req.session_id, "user", req.message)
 
             full_response = ""
+            chart_data = {}
             async for event in run_agent(req.message, auth_token, history):
                 if event["type"] == "done":
                     full_response = event.get("summary", "")
+                    chart_data = event.get("chart_data", {})
                 data = json.dumps(event, ensure_ascii=False)
                 yield {"event": "message", "data": data}
+
+            if chart_data:
+                yield {"event": "chart_data", "data": json.dumps(chart_data, ensure_ascii=False)}
 
             if full_response:
                 await session_store.append(req.session_id, "assistant", full_response)

@@ -12,6 +12,12 @@
             {{ tc.status === 'running' ? '...' : 'OK' }} {{ tc.tool }}
           </div>
         </div>
+        <!-- 图表渲染 -->
+        <div v-if="msg.chartData" class="chart-container">
+          <div v-if="msg.chartData.trend" ref="trendChartRef" class="chart-body"></div>
+          <div v-if="msg.chartData.top_products" ref="topProductsChartRef" class="chart-body"></div>
+          <div v-if="msg.chartData.warehouse" ref="warehouseChartRef" class="chart-body"></div>
+        </div>
       </div>
     </div>
     <div class="ai-panel-input">
@@ -22,8 +28,9 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, watch } from 'vue'
 import { useUserStore } from '@/store/user'
+import * as echarts from 'echarts'
 
 defineProps({ visible: Boolean })
 defineEmits(['close'])
@@ -33,6 +40,11 @@ const input = ref('')
 const loading = ref(false)
 const messages = ref([])
 const msgContainer = ref(null)
+const trendChartRef = ref(null)
+const topProductsChartRef = ref(null)
+const warehouseChartRef = ref(null)
+
+let trendChart, topProductsChart, warehouseChart
 
 const send = async () => {
   if (!input.value.trim() || loading.value) return
@@ -41,7 +53,7 @@ const send = async () => {
   messages.value.push({ role: 'user', content: text })
   loading.value = true
 
-  const assistantMsg = { role: 'assistant', content: '', toolCalls: [] }
+  const assistantMsg = { role: 'assistant', content: '', toolCalls: [], chartData: null }
   messages.value.push(assistantMsg)
 
   const resp = await fetch('/ai/chat', {
@@ -69,11 +81,58 @@ const send = async () => {
           if (tc) tc.status = 'done'
         } else if (data.type === 'done') {
           assistantMsg.content = data.summary
+          if (data.chart_data && Object.keys(data.chart_data).length > 0) {
+            assistantMsg.chartData = data.chart_data
+            nextTick(() => renderCharts(assistantMsg.chartData))
+          }
         }
       }
     }
   }
   loading.value = false
+  scrollToBottom()
+}
+
+const renderCharts = (chartData) => {
+  if (chartData.trend && trendChartRef.value) {
+    if (!trendChart) trendChart = echarts.init(trendChartRef.value)
+    const dates = chartData.trend.map(d => d.date?.slice(5) ?? '')
+    trendChart.setOption({
+      title: { text: '近7天出入库趋势', left: 'center', textStyle: { fontSize: 14 } },
+      tooltip: { trigger: 'axis' },
+      legend: { bottom: 0 },
+      xAxis: { type: 'category', data: dates },
+      yAxis: { type: 'value' },
+      series: [
+        { name: '入库', type: 'line', data: chartData.trend.map(d => d.inboundCount ?? 0), smooth: true },
+        { name: '出库', type: 'line', data: chartData.trend.map(d => d.outboundCount ?? 0), smooth: true }
+      ]
+    })
+  }
+  if (chartData.top_products && topProductsChartRef.value) {
+    if (!topProductsChart) topProductsChart = echarts.init(topProductsChartRef.value)
+    const names = chartData.top_products.map(d => d.productName)
+    const quantities = chartData.top_products.map(d => d.currentStock ?? 0)
+    topProductsChart.setOption({
+      title: { text: '货品出库排行', left: 'center', textStyle: { fontSize: 14 } },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      xAxis: { type: 'value' },
+      yAxis: { type: 'category', data: names.reverse() },
+      series: [{ type: 'bar', data: quantities.reverse(), barWidth: 12 }]
+    })
+  }
+  if (chartData.warehouse && warehouseChartRef.value) {
+    if (!warehouseChart) warehouseChart = echarts.init(warehouseChartRef.value)
+    const names = chartData.warehouse.map(d => d.category)
+    const quantities = chartData.warehouse.map(d => d.totalStock ?? 0)
+    warehouseChart.setOption({
+      title: { text: '仓库库存分布', left: 'center', textStyle: { fontSize: 14 } },
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: names },
+      yAxis: { type: 'value' },
+      series: [{ type: 'bar', data: quantities, barWidth: 32 }]
+    })
+  }
   scrollToBottom()
 }
 
@@ -107,4 +166,6 @@ const scrollToBottom = () => {
 .msg.assistant .msg-content { background: #f0f2f5; padding: 8px 12px; border-radius: 8px; }
 .tool-calls { margin-top: 4px; }
 .tool-chip { display: inline-block; padding: 2px 8px; margin: 2px; background: #e6f7ff; border-radius: 4px; font-size: 12px; }
+.chart-container { margin-top: 12px; }
+.chart-body { height: 200px; width: 100%; margin-bottom: 12px; }
 </style>

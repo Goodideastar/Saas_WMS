@@ -5,6 +5,7 @@ from config import settings
 from api.chat import router as chat_router
 from api.analysis import router as analysis_router
 from api.sessions import router as sessions_router
+from api.charts import router as charts_router
 from tools.product_tools import register_all as register_product
 from tools.inbound_tools import register_all as register_inbound
 from tools.outbound_tools import register_all as register_outbound
@@ -29,6 +30,7 @@ app.add_middleware(
 app.include_router(chat_router, prefix="/ai")
 app.include_router(analysis_router, prefix="/ai")
 app.include_router(sessions_router, prefix="/ai")
+app.include_router(charts_router, prefix="/ai/charts")
 
 @app.get("/health")
 async def health():

@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     ai_gateway_port: int = 8090
     max_agent_loops: int = 5
+    recursion_limit: int = 25
 
     class Config:
         env_file = ".env"
