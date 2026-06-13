@@ -98,8 +98,8 @@ router.beforeEach(async (to, from, next) => {
           if (!userStore.userInfo) {
             await userStore.getUserInfoAction()
           }
-          next({ ...to, replace: true })
           hasAddedRoutes = true
+          next({ ...to, replace: true })
         } catch (error) {
           userStore.logoutAction()
           next(`/login?redirect=${to.path}&expired=1`)

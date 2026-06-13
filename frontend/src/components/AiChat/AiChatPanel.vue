@@ -90,6 +90,8 @@ const send = async () => {
             assistantMsg.chartData = data.chart_data
             nextTick(() => renderCharts(assistantMsg.chartData))
           }
+        } else if (data.type === 'error') {
+          assistantMsg.content = '[错误] ' + (data.message || '请求失败，请稍后重试')
         }
       }
     }
