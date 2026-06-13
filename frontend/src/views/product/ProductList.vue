@@ -211,7 +211,8 @@ function handleAdjustStock(row) {
 }
 
 async function submitAdjustStock() {
-  await adjustStock({ productId: stockForm.productId, quantity: stockForm.quantity, adjustType: 'MANUAL', remark: stockForm.remark })
+  const adjustType = stockForm.quantity >= 0 ? 'IN' : 'OUT'
+  await adjustStock({ productId: stockForm.productId, quantity: Math.abs(stockForm.quantity), adjustType: adjustType, remark: stockForm.remark })
   ElMessage.success('库存调整成功')
   stockDialogVisible.value = false
   loadData()
