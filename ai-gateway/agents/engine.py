@@ -82,12 +82,32 @@ async def run_agent(
 
     # 流式生成最终回复
     tool_results = final_state.get("tool_results", [])
-    summary_prompt = f"根据以下工具调用结果，用自然语言回答用户。结果: {json.dumps(tool_results, ensure_ascii=False)}"
+    
+    # 构建严格的数据驱动回复prompt
+    results_text = json.dumps(tool_results, ensure_ascii=False, indent=2)
+    summary_prompt = f"""你是WMS系统的数据分析师。请根据以下工具调用结果回答用户问题。
+
+【工具调用结果】
+{results_text}
+
+【回答要求】
+1. 必须严格基于上述工具返回的真实数据回答，绝对不要编造任何数据
+2. 如果工具返回为空或无数据，明确告知用户"当前没有相关数据"
+3. 如果工具调用失败，说明失败原因
+4. 用简洁的中文回答，包含具体数字和关键信息
+5. 不要提及工具名称或技术细节，直接给出业务结论
+
+用户原始问题: {messages[-1].get('content', '')}
+
+请回答:"""
 
     full_text = ""
     stream = await provider.chat_stream([
-        {"role": "system", "content": provider.system_prompt()},
-        *messages[-3:],
+        {"role": "system", "content": """你是WMS仓储管理系统的AI助手。
+重要规则：
+- 严格基于工具返回的真实数据回答，绝不编造
+- 数据为空时明确告知用户
+- 用简洁专业的中文回答"""},
         {"role": "user", "content": summary_prompt},
     ])
     async for chunk in stream:
