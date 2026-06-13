@@ -1,0 +1,24 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e7]
+      - heading "WMS" [level=1] [ref=e12]
+      - paragraph [ref=e13]: 仓储管理系统
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - heading "登录" [level=2] [ref=e16]
+        - paragraph [ref=e17]: 输入您的账号以继续
+      - generic [ref=e18]:
+        - generic [ref=e22]:
+          - img [ref=e25]
+          - textbox "用户名" [ref=e27]
+        - generic [ref=e31]:
+          - img [ref=e34]
+          - textbox "密码" [ref=e37]
+        - generic [ref=e40] [cursor=pointer]:
+          - generic [ref=e41]:
+            - checkbox "记住我"
+          - generic [ref=e43]: 记住我
+        - button "登 录" [ref=e46] [cursor=pointer]:
+          - generic [ref=e47]: 登 录
+  - paragraph [ref=e48]: WMS v1.0 · Secure Connection

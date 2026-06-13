@@ -65,6 +65,7 @@ const send = async () => {
   const reader = resp.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
+  let currentEvent = 'message'
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
@@ -72,26 +73,35 @@ const send = async () => {
     const lines = buffer.split('\n')
     buffer = lines.pop() || ''
     for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = JSON.parse(line.slice(6))
-        if (data.type === 'step_start') {
-          assistantMsg.toolCalls.push({ tool: data.tool, status: 'running' })
-        } else if (data.type === 'step_end') {
-          const tc = assistantMsg.toolCalls.find(t => t.tool === data.tool && t.status === 'running')
-          if (tc) tc.status = 'done'
-        } else if (data.type === 'text_chunk') {
-          assistantMsg.content += data.content
-          scrollToBottom()
-        } else if (data.type === 'done') {
-          if (!assistantMsg.content && data.summary) {
-            assistantMsg.content = data.summary
+      const trimmed = line.trim()
+      if (trimmed.startsWith('event:')) {
+        currentEvent = trimmed.slice(6).trim()
+      } else if (trimmed.startsWith('data:')) {
+        const dataStr = trimmed.slice(5).trim()
+        if (!dataStr) continue
+        try {
+          const data = JSON.parse(dataStr)
+          if (data.type === 'step_start') {
+            assistantMsg.toolCalls.push({ tool: data.tool, status: 'running' })
+          } else if (data.type === 'step_end') {
+            const tc = assistantMsg.toolCalls.find(t => t.tool === data.tool && t.status === 'running')
+            if (tc) tc.status = 'done'
+          } else if (data.type === 'text_chunk') {
+            assistantMsg.content += data.content
+            scrollToBottom()
+          } else if (data.type === 'done') {
+            if (!assistantMsg.content && data.summary) {
+              assistantMsg.content = data.summary
+            }
+            if (data.chart_data && Object.keys(data.chart_data).length > 0) {
+              assistantMsg.chartData = data.chart_data
+              nextTick(() => renderCharts(assistantMsg.chartData))
+            }
+          } else if (data.type === 'error') {
+            assistantMsg.content = '[错误] ' + (data.message || '请求失败，请稍后重试')
           }
-          if (data.chart_data && Object.keys(data.chart_data).length > 0) {
-            assistantMsg.chartData = data.chart_data
-            nextTick(() => renderCharts(assistantMsg.chartData))
-          }
-        } else if (data.type === 'error') {
-          assistantMsg.content = '[错误] ' + (data.message || '请求失败，请稍后重试')
+        } catch (e) {
+          console.warn('SSE parse error:', e, dataStr)
         }
       }
     }
