@@ -135,8 +135,8 @@ function renderTrendChart(data) {
     xAxis: { type: 'category', data: dates, axisLine: { lineStyle: { color: '#e2e8f0' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
     yAxis: { type: 'value', splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
     series: [
-      { name: '入库', type: 'line', data: data.map(d => d.inboundCount ?? 0), smooth: true, symbolSize: 4, lineStyle: { width: 2 }, areaStyle: { opacity: 0.06 } },
-      { name: '出库', type: 'line', data: data.map(d => d.outboundCount ?? 0), smooth: true, symbolSize: 4, lineStyle: { width: 2 }, areaStyle: { opacity: 0.06 } }
+      { name: '入库', type: 'line', data: data.map(d => d.inboundQuantity ?? 0), smooth: true, symbolSize: 4, lineStyle: { width: 2 }, areaStyle: { opacity: 0.06 } },
+      { name: '出库', type: 'line', data: data.map(d => d.outboundQuantity ?? 0), smooth: true, symbolSize: 4, lineStyle: { width: 2 }, areaStyle: { opacity: 0.06 } }
     ]
   })
 }
@@ -144,7 +144,7 @@ function renderTrendChart(data) {
 function renderTopProductsChart(data) {
   if (!topProductsChart) topProductsChart = makeChart(topProductsChartRef)
   const names = data.map(d => d.productName)
-  const quantities = data.map(d => d.currentStock ?? 0)
+  const quantities = data.map(d => d.outboundQuantity ?? 0)
   topProductsChart.setOption({
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: '#fff', borderColor: '#e2e8f0', textStyle: { color: '#334155' } },
     grid: { top: 8, left: 4, right: 16, bottom: 8 },
@@ -182,8 +182,8 @@ function renderAlertChart(data) {
 
 function renderWarehouseChart(data) {
   if (!warehouseChart) warehouseChart = makeChart(warehouseChartRef)
-  const names = data.map(d => d.category)
-  const quantities = data.map(d => d.totalStock ?? 0)
+  const names = data.map(d => d.warehouseName)
+  const quantities = data.map(d => d.stockQuantity ?? 0)
   warehouseChart.setOption({
     tooltip: { trigger: 'axis', backgroundColor: '#fff', borderColor: '#e2e8f0', textStyle: { color: '#334155' } },
     grid: { top: 16, left: 8, right: 16, bottom: 16 },

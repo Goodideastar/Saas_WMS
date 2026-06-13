@@ -24,6 +24,7 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -83,6 +84,7 @@ public class InboundOrderServiceImpl extends ServiceImpl<InboundOrderMapper, Inb
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "dashboard", allEntries = true)
     public void auditInboundOrder(Long id) {
         logger.info("========== START: Audit Inbound Order ==========");
         logger.info("[InboundAudit] Order ID: {}", id);

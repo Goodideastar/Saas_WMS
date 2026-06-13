@@ -85,11 +85,12 @@ async def run_agent(
     summary_prompt = f"根据以下工具调用结果，用自然语言回答用户。结果: {json.dumps(tool_results, ensure_ascii=False)}"
 
     full_text = ""
-    async for chunk in provider.chat_stream([
+    stream = await provider.chat_stream([
         {"role": "system", "content": provider.system_prompt()},
         *messages[-3:],
         {"role": "user", "content": summary_prompt},
-    ]):
+    ])
+    async for chunk in stream:
         delta = chunk.choices[0].delta
         if delta and delta.content:
             full_text += delta.content

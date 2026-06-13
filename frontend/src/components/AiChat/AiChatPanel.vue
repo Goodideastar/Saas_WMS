@@ -109,15 +109,15 @@ const renderCharts = (chartData) => {
       xAxis: { type: 'category', data: dates },
       yAxis: { type: 'value' },
       series: [
-        { name: '入库', type: 'line', data: chartData.trend.map(d => d.inboundCount ?? 0), smooth: true },
-        { name: '出库', type: 'line', data: chartData.trend.map(d => d.outboundCount ?? 0), smooth: true }
+        { name: '入库', type: 'line', data: chartData.trend.map(d => d.inboundQuantity ?? 0), smooth: true },
+        { name: '出库', type: 'line', data: chartData.trend.map(d => d.outboundQuantity ?? 0), smooth: true }
       ]
     })
   }
   if (chartData.top_products && topProductsChartRef.value) {
     if (!topProductsChart) topProductsChart = echarts.init(topProductsChartRef.value)
     const names = chartData.top_products.map(d => d.productName)
-    const quantities = chartData.top_products.map(d => d.currentStock ?? 0)
+    const quantities = chartData.top_products.map(d => d.outboundQuantity ?? 0)
     topProductsChart.setOption({
       title: { text: '货品出库排行', left: 'center', textStyle: { fontSize: 14 } },
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
@@ -128,8 +128,8 @@ const renderCharts = (chartData) => {
   }
   if (chartData.warehouse && warehouseChartRef.value) {
     if (!warehouseChart) warehouseChart = echarts.init(warehouseChartRef.value)
-    const names = chartData.warehouse.map(d => d.category)
-    const quantities = chartData.warehouse.map(d => d.totalStock ?? 0)
+    const names = chartData.warehouse.map(d => d.warehouseName)
+    const quantities = chartData.warehouse.map(d => d.stockQuantity ?? 0)
     warehouseChart.setOption({
       title: { text: '仓库库存分布', left: 'center', textStyle: { fontSize: 14 } },
       tooltip: { trigger: 'axis' },
