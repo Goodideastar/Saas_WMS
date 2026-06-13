@@ -56,55 +56,64 @@ const send = async () => {
   const assistantMsg = { role: 'assistant', content: '', toolCalls: [], chartData: null }
   messages.value.push(assistantMsg)
 
-  const resp = await fetch('/ai/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userStore.token}` },
-    body: JSON.stringify({ message: text, session_id: 'default' }),
-  })
+  try {
+    const resp = await fetch('/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userStore.token}` },
+      body: JSON.stringify({ message: text, session_id: 'default' }),
+    })
 
-  const reader = resp.body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ''
-  let currentEvent = 'message'
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop() || ''
-    for (const line of lines) {
-      const trimmed = line.trim()
-      if (trimmed.startsWith('event:')) {
-        currentEvent = trimmed.slice(6).trim()
-      } else if (trimmed.startsWith('data:')) {
-        const dataStr = trimmed.slice(5).trim()
-        if (!dataStr) continue
-        try {
-          const data = JSON.parse(dataStr)
-          if (data.type === 'step_start') {
-            assistantMsg.toolCalls.push({ tool: data.tool, status: 'running' })
-          } else if (data.type === 'step_end') {
-            const tc = assistantMsg.toolCalls.find(t => t.tool === data.tool && t.status === 'running')
-            if (tc) tc.status = 'done'
-          } else if (data.type === 'text_chunk') {
-            assistantMsg.content += data.content
-            scrollToBottom()
-          } else if (data.type === 'done') {
-            if (!assistantMsg.content && data.summary) {
-              assistantMsg.content = data.summary
+    if (!resp.ok) {
+      throw new Error(`HTTP ${resp.status}: ${resp.statusText}`)
+    }
+
+    const reader = resp.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let currentEvent = 'message'
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (trimmed.startsWith('event:')) {
+          currentEvent = trimmed.slice(6).trim()
+        } else if (trimmed.startsWith('data:')) {
+          const dataStr = trimmed.slice(5).trim()
+          if (!dataStr) continue
+          try {
+            const data = JSON.parse(dataStr)
+            if (data.type === 'step_start') {
+              assistantMsg.toolCalls.push({ tool: data.tool, status: 'running' })
+            } else if (data.type === 'step_end') {
+              const tc = assistantMsg.toolCalls.find(t => t.tool === data.tool && t.status === 'running')
+              if (tc) tc.status = 'done'
+            } else if (data.type === 'text_chunk') {
+              assistantMsg.content += data.content
+              scrollToBottom()
+            } else if (data.type === 'done') {
+              if (!assistantMsg.content && data.summary) {
+                assistantMsg.content = data.summary
+              }
+              if (data.chart_data && Object.keys(data.chart_data).length > 0) {
+                assistantMsg.chartData = data.chart_data
+                nextTick(() => renderCharts(assistantMsg.chartData))
+              }
+            } else if (data.type === 'error') {
+              assistantMsg.content = '[错误] ' + (data.message || '请求失败，请稍后重试')
             }
-            if (data.chart_data && Object.keys(data.chart_data).length > 0) {
-              assistantMsg.chartData = data.chart_data
-              nextTick(() => renderCharts(assistantMsg.chartData))
-            }
-          } else if (data.type === 'error') {
-            assistantMsg.content = '[错误] ' + (data.message || '请求失败，请稍后重试')
+          } catch (e) {
+            console.warn('SSE parse error:', e, dataStr)
           }
-        } catch (e) {
-          console.warn('SSE parse error:', e, dataStr)
         }
       }
     }
+  } catch (e) {
+    console.error('Chat request failed:', e)
+    assistantMsg.content = '[错误] Connection error: ' + (e.message || '请检查网络连接')
   }
   loading.value = false
   scrollToBottom()

@@ -1,11 +1,13 @@
 # ai-gateway/api/chat.py
 import json
+import logging
 from fastapi import APIRouter, Request
 from sse_starlette.sse import EventSourceResponse
 from models.schemas import ChatRequest
 from models.session import session_store
 from agents.engine import run_agent
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -34,6 +36,7 @@ async def chat(req: ChatRequest, request: Request):
                 await session_store.append(req.session_id, "assistant", full_response)
 
         except Exception as e:
-            yield {"event": "error", "data": json.dumps({"type": "error", "message": str(e)})}
+            logger.error(f"Chat error: {e}", exc_info=True)
+            yield {"event": "message", "data": json.dumps({"type": "error", "message": str(e)})}
 
     return EventSourceResponse(event_stream())
