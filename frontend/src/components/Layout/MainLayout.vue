@@ -71,6 +71,7 @@
         </div>
 
         <div class="header-right">
+          <AiChatTrigger :open="aiPanelOpen" @toggle="aiPanelOpen = !aiPanelOpen" />
           <button class="header-btn" title="全屏">
             <el-icon :size="16"><FullScreen /></el-icon>
           </button>
@@ -103,7 +104,6 @@
       </el-main>
     </el-container>
   </el-container>
-<AiChatTrigger :open="aiPanelOpen" @toggle="aiPanelOpen = !aiPanelOpen" />
 <AiChatPanel :visible="aiPanelOpen" @close="aiPanelOpen = false" />
 </template>
 

@@ -1,5 +1,6 @@
 # ai-gateway/agents/engine.py
 """基于LangGraph的Agent引擎"""
+import json
 from langgraph.graph import StateGraph, END
 from agents.state import AgentState
 from agents.nodes import plan_node, execute_node, observe_node, replan_node, summarize_node
@@ -19,17 +20,14 @@ def build_graph() -> StateGraph:
     """构建LangGraph工作流"""
     workflow = StateGraph(AgentState)
 
-    # 添加节点
     workflow.add_node("plan", plan_node)
     workflow.add_node("execute", execute_node)
     workflow.add_node("observe", observe_node)
     workflow.add_node("replan", replan_node)
     workflow.add_node("summarize", summarize_node)
 
-    # 设置入口点
     workflow.set_entry_point("plan")
 
-    # 添加边
     workflow.add_edge("plan", "execute")
     workflow.add_edge("execute", "observe")
     workflow.add_conditional_edges("observe", should_continue, {
@@ -42,7 +40,6 @@ def build_graph() -> StateGraph:
     return workflow.compile()
 
 
-# 全局图实例
 graph = build_graph()
 
 
@@ -51,7 +48,7 @@ async def run_agent(
     auth_token: str,
     history: list[dict] | None = None,
 ):
-    """运行Agent，返回SSE事件流"""
+    """运行Agent，实时流式返回SSE事件"""
     from llm.provider import get_provider
     from tools.registry import registry
 
@@ -73,17 +70,34 @@ async def run_agent(
         "chart_data": {},
     }
 
-    # 执行图
-    result = await graph.ainvoke(initial_state, {"recursion_limit": 25})
+    yielded_count = 0
+    final_state = initial_state
 
-    # 生成事件流
-    for event in result.get("trace", []):
-        yield event
+    async for state in graph.astream(initial_state, {"recursion_limit": 25}):
+        final_state = state
+        traces = state.get("trace", [])
+        while yielded_count < len(traces):
+            yield traces[yielded_count]
+            yielded_count += 1
 
-    # 最终结果
+    # 流式生成最终回复
+    tool_results = final_state.get("tool_results", [])
+    summary_prompt = f"根据以下工具调用结果，用自然语言回答用户。结果: {json.dumps(tool_results, ensure_ascii=False)}"
+
+    full_text = ""
+    async for chunk in provider.chat_stream([
+        {"role": "system", "content": provider.system_prompt()},
+        *messages[-3:],
+        {"role": "user", "content": summary_prompt},
+    ]):
+        delta = chunk.choices[0].delta
+        if delta and delta.content:
+            full_text += delta.content
+            yield {"type": "text_chunk", "content": delta.content}
+
     yield {
         "type": "done",
-        "summary": result.get("final_response", ""),
-        "trace": result.get("trace", []),
-        "chart_data": result.get("chart_data", {}),
+        "summary": full_text,
+        "trace": final_state.get("trace", []),
+        "chart_data": final_state.get("chart_data", {}),
     }

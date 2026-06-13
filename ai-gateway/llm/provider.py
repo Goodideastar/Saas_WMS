@@ -32,10 +32,17 @@ class LLMProvider(ABC):
         )
 
 
+_provider_instance: "LLMProvider | None" = None
+
+
 def get_provider() -> "LLMProvider":
+    global _provider_instance
+    if _provider_instance is not None:
+        return _provider_instance
     from llm.qwen import QwenProvider
     from llm.deepseek import DeepSeekProvider
 
     providers = {"qwen": QwenProvider, "deepseek": DeepSeekProvider}
     cls = providers.get(settings.llm_provider, QwenProvider)
-    return cls()
+    _provider_instance = cls()
+    return _provider_instance

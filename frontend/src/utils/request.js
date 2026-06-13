@@ -25,13 +25,16 @@ service.interceptors.response.use(
   response => {
     const res = response.data
     if (res.code !== 200) {
-      ElMessage.error(res.message || '请求失败')
       if (res.code === 401) {
         removeToken()
         removeUserInfo()
-        router.push('/login')
+        ElMessage.error('登录已过期，请重新登录')
+        router.push('/login?expired=1')
+        return Promise.reject(new Error('登录已过期'))
       } else if (res.code === 403) {
         ElMessage.error('权限不足，无法执行此操作')
+      } else {
+        ElMessage.error(res.message || '请求失败')
       }
       return Promise.reject(new Error(res.message || '请求失败'))
     }
@@ -43,8 +46,8 @@ service.interceptors.response.use(
         case 401:
           removeToken()
           removeUserInfo()
-          router.push('/login')
           ElMessage.error('登录已过期，请重新登录')
+          router.push('/login?expired=1')
           break
         case 403:
           ElMessage.error('权限不足')

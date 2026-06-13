@@ -102,7 +102,7 @@ router.beforeEach(async (to, from, next) => {
           hasAddedRoutes = true
         } catch (error) {
           userStore.logoutAction()
-          next(`/login?redirect=${to.path}`)
+          next(`/login?redirect=${to.path}&expired=1`)
         }
       }
     }

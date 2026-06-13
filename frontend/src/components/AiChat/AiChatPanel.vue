@@ -79,8 +79,13 @@ const send = async () => {
         } else if (data.type === 'step_end') {
           const tc = assistantMsg.toolCalls.find(t => t.tool === data.tool && t.status === 'running')
           if (tc) tc.status = 'done'
+        } else if (data.type === 'text_chunk') {
+          assistantMsg.content += data.content
+          scrollToBottom()
         } else if (data.type === 'done') {
-          assistantMsg.content = data.summary
+          if (!assistantMsg.content && data.summary) {
+            assistantMsg.content = data.summary
+          }
           if (data.chart_data && Object.keys(data.chart_data).length > 0) {
             assistantMsg.chartData = data.chart_data
             nextTick(() => renderCharts(assistantMsg.chartData))

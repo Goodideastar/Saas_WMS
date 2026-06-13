@@ -23,6 +23,11 @@
           <p>输入您的账号以继续</p>
         </div>
 
+        <div v-if="isExpired" class="expired-banner">
+          <el-icon :size="16"><WarningFilled /></el-icon>
+          <span>登录已过期，请重新登录</span>
+        </div>
+
         <el-form ref="formRef" :model="loginForm" :rules="rules" @keyup.enter="handleLogin">
           <el-form-item prop="username">
             <el-input
@@ -59,17 +64,19 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { ElMessage } from 'element-plus'
-import { User, Lock } from '@element-plus/icons-vue'
+import { User, Lock, WarningFilled } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const formRef = ref(null)
 const loading = ref(false)
+
+const isExpired = computed(() => route.query.expired === '1')
 
 const loginForm = reactive({
   username: '',
@@ -189,6 +196,20 @@ async function handleLogin() {
   width: 400px;
   padding: 48px 40px 40px;
   background: #1e293b;
+}
+
+.expired-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 20px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: var(--radius-sm);
+  color: #fbbf24;
+  font-size: var(--font-sm);
+  font-weight: 500;
 }
 
 .card-header {

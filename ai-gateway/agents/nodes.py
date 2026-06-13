@@ -70,8 +70,7 @@ async def execute_node(state: dict) -> dict:
             tool_results.append({"tool": tool_name, "error": str(e), "success": False})
             trace.append({"type": "error", "tool": tool_name, "message": str(e), "recoverable": True})
 
-    # 提取图表数据（如果是dashboard相关查询）
-    chart_data = {}
+    chart_data = dict(state.get("chart_data", {}))
     for r in tool_results:
         if r.get("success") and r.get("result"):
             tool = r["tool"]
@@ -95,32 +94,36 @@ async def execute_node(state: dict) -> dict:
 
 
 async def observe_node(state: dict) -> dict:
-    """OBSERVE节点：评估执行结果是否完成目标"""
-    provider = get_provider()
-    tool_calls = state.get("tool_calls", [])
+    """OBSERVE节点：规则评估执行结果（无LLM调用）"""
     tool_results = state.get("tool_results", [])
-    messages = state["messages"]
+    tool_calls = state.get("tool_calls", [])
 
-    prompt = f"""评估以下工具执行结果是否完成了用户目标。
+    if not tool_calls:
+        return {
+            "is_complete": True,
+            "trace": [{"type": "observe", "assessment": {"complete": True, "assessment": "无需工具调用"}}],
+        }
 
-计划: {json.dumps(tool_calls, ensure_ascii=False)}
-执行结果: {json.dumps(tool_results, ensure_ascii=False)}
+    if not tool_results:
+        return {
+            "is_complete": False,
+            "trace": [{"type": "observe", "assessment": {"complete": False, "assessment": "无执行结果"}}],
+        }
 
-返回JSON:
-{{"complete": true/false, "assessment": "评估说明", "missing_info": ["缺少的信息"]}}"""
+    all_success = all(r.get("success") for r in tool_results)
+    has_data = any(
+        r.get("success") and r.get("result") and r["result"] is not None
+        for r in tool_results
+    )
 
-    resp = await provider.chat([
-        {"role": "system", "content": provider.system_prompt()},
-        *messages[-5:],
-        {"role": "user", "content": prompt},
-    ])
-    content = resp.choices[0].message.content
-    content = content.strip().removeprefix("```json").removesuffix("```").strip()
-    obs = json.loads(content)
+    complete = all_success and has_data
 
     return {
-        "is_complete": obs.get("complete", False),
-        "trace": [{"type": "observe", "assessment": obs}],
+        "is_complete": complete,
+        "trace": [{"type": "observe", "assessment": {
+            "complete": complete,
+            "assessment": "所有工具执行成功" if complete else "部分工具执行失败，需要重试",
+        }}],
     }
 
 
@@ -130,7 +133,6 @@ async def replan_node(state: dict) -> dict:
     tools_schema = state["tools_schema"]
     messages = state["messages"]
     tool_results = state.get("tool_results", [])
-    trace = state.get("trace", [])
 
     prompt = f"""根据之前的执行结果，重新制定工具调用计划。
 
@@ -154,28 +156,18 @@ async def replan_node(state: dict) -> dict:
     content = content.strip().removeprefix("```json").removesuffix("```").strip()
     plan = json.loads(content)
 
+    loop_count = state.get("loop_count", 0)
     return {
         "messages": [{"role": "assistant", "content": f"重新规划: {plan.get('reason', '')}"}],
         "tool_calls": plan.get("steps", []),
         "trace": [{"type": "replan", "plan": plan}],
+        "loop_count": loop_count + 1,
     }
 
 
 async def summarize_node(state: dict) -> dict:
-    """SUMMARIZE节点：整合结果生成自然语言回复"""
-    provider = get_provider()
-    messages = state["messages"]
-    tool_results = state.get("tool_results", [])
-
-    prompt = f"根据以下工具调用结果，用自然语言回答用户。结果: {json.dumps(tool_results, ensure_ascii=False)}"
-    resp = await provider.chat([
-        {"role": "system", "content": provider.system_prompt()},
-        *messages[-3:],
-        {"role": "user", "content": prompt},
-    ])
-    summary = resp.choices[0].message.content
-
+    """SUMMARIZE节点：整合结果生成自然语言回复（LLM由run_agent流式处理）"""
     return {
-        "final_response": summary,
-        "trace": [{"type": "done", "summary": summary}],
+        "final_response": "",
+        "trace": [{"type": "summarize_start"}],
     }
