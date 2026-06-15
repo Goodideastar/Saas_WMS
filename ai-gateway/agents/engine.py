@@ -73,7 +73,7 @@ async def run_agent(
     yielded_count = 0
     final_state = initial_state
 
-    async for state in graph.astream(initial_state, {"recursion_limit": 25}):
+    async for state in graph.astream(initial_state, {"recursion_limit": 25}, stream_mode="values"):
         final_state = state
         traces = state.get("trace", [])
         while yielded_count < len(traces):
