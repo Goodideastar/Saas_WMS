@@ -18,7 +18,7 @@ async def plan_node(state: dict) -> dict:
     if tool_results:
         context = f"\n之前的执行结果: {json.dumps(tool_results, ensure_ascii=False)}"
 
-    prompt = f"""你是一个任务规划器。根据用户意图，制定工具调用计划。
+    prompt = f"""你是WMS仓储系统的任务规划器。用户想查询或操作数据，你必须选择合适的工具来执行。
 
 可用工具: {tools_desc}
 {context}
@@ -26,11 +26,12 @@ async def plan_node(state: dict) -> dict:
 返回JSON格式:
 {{"goal": "目标描述", "steps": [{{"tool": "工具名", "args": {{参数}}}}], "reason": "规划理由"}}
 
-规则:
-1. 只使用列出的工具名，args严格匹配工具参数定义
-2. 先读后写，写操作前确认
-3. 报表类查询直接用一个工具即可
-4. 步骤最少化，不要冗余调用"""
+重要规则:
+1. 用户问任何数据相关的问题，都必须至少调用一个工具查询，绝不返回空steps
+2. 只使用列出的工具名，args严格匹配工具参数定义
+3. 先读后写，写操作前确认
+4. 用户问"库存"相关→用product_search或dashboard_summary；问"趋势/排行"→用dashboard_trend/dashboard_top；问"入库/出库单"→用inbound_search/outbound_search；问"预警/告警"→用alert_search
+5. 不确定该用哪个工具时，至少用product_search或dashboard_summary兜底"""
 
     resp = await provider.chat([
         {"role": "system", "content": provider.system_prompt()},
@@ -100,8 +101,9 @@ async def observe_node(state: dict) -> dict:
 
     if not tool_calls:
         return {
-            "is_complete": True,
-            "trace": [{"type": "observe", "assessment": {"complete": True, "assessment": "无需工具调用"}}],
+            "is_complete": False,
+            "loop_count": state.get("loop_count", 0),
+            "trace": [{"type": "observe", "assessment": {"complete": False, "assessment": "规划未生成工具调用，需要重新规划"}}],
         }
 
     if not tool_results:
@@ -134,7 +136,7 @@ async def replan_node(state: dict) -> dict:
     messages = state["messages"]
     tool_results = state.get("tool_results", [])
 
-    prompt = f"""根据之前的执行结果，重新制定工具调用计划。
+    prompt = f"""你是WMS仓储系统的任务规划器。之前的工具调用没有成功获取数据，你必须重新选择工具。
 
 可用工具: {json.dumps(tools_schema, ensure_ascii=False)}
 之前的执行结果: {json.dumps(tool_results, ensure_ascii=False)}
@@ -142,10 +144,11 @@ async def replan_node(state: dict) -> dict:
 返回JSON格式:
 {{"goal": "目标描述", "steps": [{{"tool": "工具名", "args": {{参数}}}}], "reason": "规划理由"}}
 
-规则:
-1. 只使用列出的工具名
-2. 补充之前缺少的步骤
-3. 步骤最少化"""
+重要规则:
+1. 必须至少调用一个工具，绝不返回空steps
+2. 如果之前步骤失败，换一个相关工具重试
+3. 只使用列出的工具名
+4. 步骤最少化"""
 
     resp = await provider.chat([
         {"role": "system", "content": provider.system_prompt()},

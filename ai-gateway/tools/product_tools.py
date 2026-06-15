@@ -30,7 +30,7 @@ _adjust_params = {
     "required": ["productId", "quantity"]
 }
 
-@tool("product_search", "查询商品列表，支持按名称、编码筛选，返回分页结果", _search_params)
+@tool("product_search", "查询商品/货品列表。当用户问：货品列表、库存情况、有哪些商品、商品信息、搜索商品时使用。返回分页结果含库存量", _search_params)
 async def product_search(client: WMSClient, **kwargs) -> dict:
     return await client.get("/api/product/page", params=kwargs)
 
