@@ -18,7 +18,7 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 
 # 阶段 2: 运行阶段
-FROM nginx:alpine
+FROM nginx:latest
 WORKDIR /app
 
 # 添加标签
