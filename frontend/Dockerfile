@@ -28,10 +28,7 @@ LABEL description="WMS Frontend Service"
 
 # 设置时区
 ENV TZ=Asia/Shanghai
-RUN apk add --no-cache tzdata \
-    && cp /usr/share/zoneinfo/$TZ /etc/localtime \
-    && echo $TZ > /etc/timezone \
-    && rm -rf /var/cache/apk/*
+RUN ln -sf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # 复制 Nginx 配置
 COPY nginx.conf /etc/nginx/conf.d/default.conf
