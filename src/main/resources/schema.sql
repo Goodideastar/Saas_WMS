@@ -232,7 +232,7 @@ CREATE TABLE wms_operation_log (
 
 -- Insert default admin user (password: admin123)
 INSERT INTO sys_user (id, username, password, email, phone, status, create_by, update_by) 
-VALUES (1, 'admin', '$2a$10$rCZjF8bJQ8fMqK3qL0jYhOL9g8F0h7K3lM9nO2pQ5rS7tU8vW9xYz', 'admin@wms.com', '13800138000', 1, 'system', 'system');
+VALUES (1, 'admin', '$2a$10$.Q.3vq3ND0R7v6ODGRAmYe6XnrVthVULGsnv1glErLOngdLFZUzHe', 'admin@wms.com', '13800138000', 1, 'system', 'system');
 
 -- Insert default roles
 INSERT INTO sys_role (id, role_code, role_name, description, status, create_by, update_by) 

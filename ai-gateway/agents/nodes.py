@@ -1,9 +1,95 @@
 # ai-gateway/agents/nodes.py
 """LangGraph节点定义：每个节点对应一个处理步骤"""
 import json
+import re
+import logging
 from llm.provider import get_provider
 from tools.registry import registry
 from utils.wms_client import WMSClient
+
+logger = logging.getLogger(__name__)
+
+
+def extract_json(content: str) -> dict | None:
+    """从LLM返回内容中提取JSON，支持多种格式"""
+    if not content or not content.strip():
+        logger.warning("LLM返回空内容")
+        return None
+
+    text = content.strip()
+
+    # 去除markdown代码块包裹
+    text = re.sub(r"^```(?:json)?\s*", "", text)
+    text = re.sub(r"\s*```$", "", text)
+    text = text.strip()
+
+    # 尝试直接解析
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # 尝试提取第一个完整的JSON对象（从第一个{ 到最后一个}）
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        json_str = text[start:end + 1]
+        try:
+            return json.loads(json_str)
+        except json.JSONDecodeError:
+            pass
+
+    # 尝试逐行提取（处理LLM在JSON前后添加说明文字的情况）
+    lines = text.split("\n")
+    json_lines = []
+    in_json = False
+    brace_count = 0
+    for line in lines:
+        if "{" in line and not in_json:
+            in_json = True
+        if in_json:
+            json_lines.append(line)
+            brace_count += line.count("{") - line.count("}")
+            if brace_count <= 0:
+                break
+    if json_lines:
+        json_str = "\n".join(json_lines)
+        try:
+            return json.loads(json_str)
+        except json.JSONDecodeError:
+            pass
+
+    logger.error("无法从LLM返回中提取JSON: %s", content[:200])
+    return None
+
+
+def build_fallback_plan(state: dict, reason: str = "LLM返回格式异常，使用兜底计划") -> dict:
+    """兜底计划：当LLM返回无法解析时，根据用户消息推断工具"""
+    messages = state.get("messages", [])
+    user_msg = ""
+    for m in reversed(messages):
+        if m.get("role") == "user":
+            user_msg = m.get("content", "").lower()
+            break
+
+    # 根据关键词推断工具
+    if any(kw in user_msg for kw in ["趋势", "排行", "排名", "top", "chart", "图表"]):
+        steps = [{"tool": "dashboard_trend", "args": {}}]
+    elif any(kw in user_msg for kw in ["预警", "告警", "alert"]):
+        steps = [{"tool": "alert_search", "args": {}}]
+    elif any(kw in user_msg for kw in ["入库", "inbound"]):
+        steps = [{"tool": "inbound_search", "args": {}}]
+    elif any(kw in user_msg for kw in ["出库", "outbound"]):
+        steps = [{"tool": "outbound_search", "args": {}}]
+    else:
+        # 默认使用dashboard_summary兜底
+        steps = [{"tool": "dashboard_summary", "args": {}}]
+
+    return {
+        "goal": "兜底查询",
+        "steps": steps,
+        "reason": reason,
+    }
 
 
 async def plan_node(state: dict) -> dict:
@@ -23,7 +109,8 @@ async def plan_node(state: dict) -> dict:
 可用工具: {tools_desc}
 {context}
 
-返回JSON格式:
+只返回纯JSON，不要包含任何其他文字、解释或markdown标记。
+JSON格式:
 {{"goal": "目标描述", "steps": [{{"tool": "工具名", "args": {{参数}}}}], "reason": "规划理由"}}
 
 重要规则:
@@ -39,8 +126,10 @@ async def plan_node(state: dict) -> dict:
         {"role": "user", "content": prompt},
     ])
     content = resp.choices[0].message.content
-    content = content.strip().removeprefix("```json").removesuffix("```").strip()
-    plan = json.loads(content)
+    plan = extract_json(content)
+
+    if plan is None or not plan.get("steps"):
+        plan = build_fallback_plan(state)
 
     return {
         "messages": [{"role": "assistant", "content": f"规划: {plan.get('reason', '')}"}],
@@ -156,8 +245,10 @@ async def replan_node(state: dict) -> dict:
         {"role": "user", "content": prompt},
     ])
     content = resp.choices[0].message.content
-    content = content.strip().removeprefix("```json").removesuffix("```").strip()
-    plan = json.loads(content)
+    plan = extract_json(content)
+
+    if plan is None or not plan.get("steps"):
+        plan = build_fallback_plan(state, reason="LLM重新规划返回格式异常，使用兜底计划")
 
     loop_count = state.get("loop_count", 0)
     return {
