@@ -133,18 +133,49 @@
         <el-button type="primary" @click="handleSubmit">提交</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="detailVisible" :title="'入库单详情 - ' + (detailData.orderNo || '')" width="820px" :close-on-click-modal="false">
+      <el-descriptions :column="2" border v-loading="detailLoading">
+        <el-descriptions-item label="订单号">{{ detailData.orderNo }}</el-descriptions-item>
+        <el-descriptions-item label="状态"><el-tag :type="getStatusType(detailData.status)">{{ getStatusText(detailData.status) }}</el-tag></el-descriptions-item>
+        <el-descriptions-item label="仓库">{{ detailData.warehouseName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="入库类型">{{ detailData.inboundType }}</el-descriptions-item>
+        <el-descriptions-item label="供应商">{{ detailData.supplier || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="关联订单">{{ detailData.relatedOrderNo || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="创建人">{{ detailData.createBy || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ detailData.createTime ? detailData.createTime.replace('T', ' ') : '-' }}</el-descriptions-item>
+        <el-descriptions-item label="入库时间" :span="2">{{ detailData.inboundTime ? detailData.inboundTime.replace('T', ' ') : '-' }}</el-descriptions-item>
+        <el-descriptions-item label="备注" :span="2">{{ detailData.remark || '-' }}</el-descriptions-item>
+      </el-descriptions>
+      <el-divider content-position="left">入库明细</el-divider>
+      <el-table :data="detailData.items || []" border stripe size="small">
+        <el-table-column prop="productCode" label="产品编码" width="120" />
+        <el-table-column prop="productName" label="产品名称" />
+        <el-table-column prop="expectedQuantity" label="应入数量" width="100" align="right" />
+        <el-table-column prop="actualQuantity" label="实入数量" width="100" align="right" />
+        <el-table-column prop="unitPrice" label="单价" width="100" align="right">
+          <template #default="{ row }">¥{{ Number(row.unitPrice || 0).toFixed(2) }}</template>
+        </el-table-column>
+        <el-table-column prop="subtotal" label="小计" width="110" align="right">
+          <template #default="{ row }">¥{{ Number(row.subtotal || 0).toFixed(2) }}</template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { getInboundPage, createInbound, auditInbound, cancelInbound } from '@/api/inbound.js'
+import { getInboundPage, createInbound, auditInbound, cancelInbound, getInboundDetail } from '@/api/inbound.js'
 import { getProductPage } from '@/api/product.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const loading = ref(false)
 const tableData = ref([])
 const dialogVisible = ref(false)
+const detailVisible = ref(false)
+const detailLoading = ref(false)
+const detailData = ref({})
 const productList = ref([])
 const pagination = reactive({ pageNum: 1, pageSize: 10, total: 0 })
 const queryForm = reactive({ orderNo: '', status: '', dateRange: null })
@@ -195,7 +226,16 @@ async function handleCancel(row) {
   loadData()
 }
 
-function handleDetail(row) { ElMessage.info('详情功能：' + row.orderNo) }
+function handleDetail(row) { loadDetail(row.id) }
+
+async function loadDetail(id) {
+  detailLoading.value = true
+  try {
+    const res = await getInboundDetail(id)
+    detailData.value = res.data || {}
+    detailVisible.value = true
+  } finally { detailLoading.value = false }
+}
 
 onMounted(() => loadData())
 </script>
