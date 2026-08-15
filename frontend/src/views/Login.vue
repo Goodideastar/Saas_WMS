@@ -110,12 +110,29 @@ const isExpired = computed(() => route.query.expired === '1')
 const loginForm = reactive({
   username: '',
   password: '',
-  remember: false
+  remember: false,
+  captchaKey: '',
+  captchaCode: ''
 })
+const captchaImage = ref('')
+const captchaLoading = ref(false)
 
 const rules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  captchaCode: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
+}
+
+async function loadCaptcha() {
+  captchaLoading.value = true
+  try {
+    const res = await getCaptcha()
+    const data = res.data
+    loginForm.captchaKey = data.key
+    captchaImage.value = 'data:image/png;base64,' + data.image
+  } finally {
+    captchaLoading.value = false
+  }
 }
 
 async function handleLogin() {
@@ -124,12 +141,20 @@ async function handleLogin() {
 
   loading.value = true
   try {
-    await userStore.loginAction({ username: loginForm.username, password: loginForm.password })
+    await userStore.loginAction({
+      username: loginForm.username,
+      password: loginForm.password,
+      captchaKey: loginForm.captchaKey,
+      captchaCode: loginForm.captchaCode
+    })
     ElMessage.success('登录成功')
     const redirect = route.query.redirect || '/'
     router.push(redirect)
-  } catch {
-    ElMessage.error('登录失败，请检查用户名和密码')
+  } catch (error) {
+    if (error?.code === 4001 || error?.code === 4002) {
+      loadCaptcha()
+    }
+    ElMessage.error(error?.msg || '登录失败，请检查用户名、密码和验证码')
   } finally {
     loading.value = false
   }
@@ -202,6 +227,7 @@ function drawParticles() {
 onMounted(() => {
   initCanvas()
   drawParticles()
+  loadCaptcha()
 })
 
 onUnmounted(() => {
@@ -529,6 +555,70 @@ onUnmounted(() => {
   border-color: #fff;
 }
 
+/* Captcha row */
+.captcha-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+}
+
+.captcha-input {
+  flex: 1;
+}
+
+.captcha-input :deep(.el-input__wrapper) {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(6, 182, 212, 0.15);
+  box-shadow: none !important;
+  border-radius: 6px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.captcha-input :deep(.el-input__wrapper.is-focus) {
+  border-color: rgba(6, 182, 212, 0.6);
+  box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.15) !important;
+}
+
+.captcha-input :deep(.el-input__inner) {
+  color: #e2e8f0;
+}
+
+.captcha-img {
+  width: 110px;
+  height: 40px;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  flex-shrink: 0;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.captcha-img:hover:not(.is-loading) {
+  border-color: rgba(6, 182, 212, 0.5);
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.2);
+}
+
+.captcha-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.captcha-refresh-icon {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(6, 182, 212, 0.5);
+  font-size: 20px;
+}
+
+/* Login footer */
 .login-footer {
   position: absolute;
   bottom: 20px;

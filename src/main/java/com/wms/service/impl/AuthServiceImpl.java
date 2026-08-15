@@ -15,6 +15,7 @@ import com.wms.mapper.RolePermissionMapper;
 import com.wms.mapper.UserMapper;
 import com.wms.mapper.UserRoleMapper;
 import com.wms.service.AuthService;
+import com.wms.utils.CaptchaUtil;
 import com.wms.utils.JwtUtils;
 import com.wms.vo.LoginVo;
 import com.wms.vo.UserInfoVo;
@@ -40,12 +41,15 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final StringRedisTemplate redisTemplate;
+    private final CaptchaUtil captchaUtil;
 
     private static final String TOKEN_BLACKLIST_PREFIX = "auth:blacklist:";
     private static final String USER_PERM_KEY = "user:perm:";
 
     @Override
     public LoginVo login(LoginDto loginDto) {
+        captchaUtil.verify(redisTemplate, loginDto.getCaptchaKey(), loginDto.getCaptchaCode());
+
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(User::getUsername, loginDto.getUsername());
         User user = userMapper.selectOne(queryWrapper);

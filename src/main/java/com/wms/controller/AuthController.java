@@ -5,6 +5,7 @@ import com.wms.dto.LoginDto;
 import com.wms.dto.RegisterDto;
 import com.wms.security.UserDetailsImpl;
 import com.wms.service.AuthService;
+import com.wms.utils.CaptchaUtil;
 import com.wms.vo.LoginVo;
 import com.wms.vo.UserInfoVo;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +22,12 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final CaptchaUtil captchaUtil;
+
+    @GetMapping("/captcha")
+    public Result<CaptchaUtil.CaptchaResult> getCaptcha() {
+        return Result.success(captchaUtil.generate(null));
+    }
 
     @PostMapping("/login")
     public Result<LoginVo> login(@Valid @RequestBody LoginDto loginDto) {
