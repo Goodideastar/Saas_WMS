@@ -1,19 +1,57 @@
-# Docker 相关
-.dockerignore
-.env
-*.log
-
-# 构建产物
+# ===== 构建产物 =====
 target/
-*.jar
 dist/
+*.jar
+*.war
+*.ear
+*.class
+
+# ===== 依赖目录 =====
 node_modules/
+frontend/node_modules/
+ai-gateway/node_modules/
 
-# IDE
+# ===== Java / Maven =====
 .idea/
-.vscode/
 *.iml
+*.ipr
+*.iws
+.settings/
+.project
+.classpath
 
-# 操作系统
+# ===== Python =====
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# ===== AI 工具 & IDE =====
+.claude/
+Claude.md
+CLAUDE.md
+.playwright-mcp/
+.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# ===== 系统文件 =====
 .DS_Store
 Thumbs.db
+*.log
+logs/
+
+# ===== 环境变量 =====
+.env
+.env.local
+.env.*.local
+
+# ===== 临时文件 =====
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
