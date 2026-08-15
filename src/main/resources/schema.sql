@@ -1,6 +1,6 @@
 -- WMS Database Initialization Script
 -- 在 MySQL 客户端执行: mysql -h <host> -u root -p < schema.sql
--- 幂等：所有 CREATE TABLE 使用 IF NOT EXISTS，INSERT 使用 REPLACE INTO
+-- 幂等：所有 CREATE TABLE 使用 IF NOT EXISTS，INSERT 使用 INSERT IGNORE（不覆盖已有数据）
 
 CREATE DATABASE IF NOT EXISTS wms DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE wms;
