@@ -267,11 +267,12 @@ CREATE TABLE IF NOT EXISTS operation_log (
 -- ============================================================
 
 -- 管理员密码: admin123  (BCrypt)
-REPLACE INTO sys_user (id, username, password, email, phone, status, create_by, update_by)
+-- 仅在用户不存在时插入，避免每次初始化覆盖已有的密码
+INSERT IGNORE INTO sys_user (id, username, password, email, phone, status, create_by, update_by)
 VALUES (1, 'admin', '$2a$10$.Q.3vq3ND0R7v6ODGRAmYe6XnrVthVULGsnv1glErLOngdLFZUzHe',
         'admin@wms.com', '13800138000', 1, 'system', 'system');
 
-REPLACE INTO sys_role (id, role_code, role_name, description, status, create_by, update_by)
+INSERT IGNORE INTO sys_role (id, role_code, role_name, description, status, create_by, update_by)
 VALUES (1, 'ADMIN',            '系统管理员', '拥有全部权限', 1, 'system', 'system'),
        (2, 'WAREHOUSE_MANAGER','仓库管理员', '出入库管理', 1, 'system', 'system'),
        (3, 'OPERATOR',         '操作员',     '日常操作',   1, 'system', 'system');
@@ -299,5 +300,5 @@ REPLACE INTO sys_user_role (id, user_id, role_id) VALUES (1, 1, 1);
 INSERT IGNORE INTO sys_role_permission (id, role_id, permission_id)
 SELECT id, 1, id FROM sys_permission;
 
-REPLACE INTO wms_warehouse (id, warehouse_code, warehouse_name, address, contact_person, contact_phone, status, create_by, update_by)
+INSERT IGNORE INTO wms_warehouse (id, warehouse_code, warehouse_name, address, contact_person, contact_phone, status, create_by, update_by)
 VALUES (1, 'WH001', '主仓库', '北京市朝阳区', '张三', '13800138001', 1, 'system', 'system');
