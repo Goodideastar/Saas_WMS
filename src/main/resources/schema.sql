@@ -212,7 +212,7 @@ CREATE TABLE wms_stock_alert (
     version INT DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE wms_operation_log (
+CREATE TABLE operation_log (
     id BIGINT PRIMARY KEY,
     operator VARCHAR(50),
     ip VARCHAR(50),
@@ -231,19 +231,19 @@ CREATE TABLE wms_operation_log (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Insert default admin user (password: admin123)
-INSERT INTO sys_user (id, username, password, email, phone, status, create_by, update_by) 
+INSERT INTO wms.sys_user (id, username, password, email, phone, status, create_by, update_by)
 VALUES (1, 'admin', '$2a$10$.Q.3vq3ND0R7v6ODGRAmYe6XnrVthVULGsnv1glErLOngdLFZUzHe', 'admin@wms.com', '13800138000', 1, 'system', 'system');
 
 -- Insert default roles
-INSERT INTO sys_role (id, role_code, role_name, description, status, create_by, update_by) 
+INSERT INTO wms.sys_role (id, role_code, role_name, description, status, create_by, update_by)
 VALUES (1, 'ADMIN', '系统管理员', '系统管理员拥有所有权限', 1, 'system', 'system');
-INSERT INTO sys_role (id, role_code, role_name, description, status, create_by, update_by) 
+INSERT INTO wms.sys_role (id, role_code, role_name, description, status, create_by, update_by)
 VALUES (2, 'WAREHOUSE_MANAGER', '仓库管理员', '仓库管理员负责出入库管理', 1, 'system', 'system');
-INSERT INTO sys_role (id, role_code, role_name, description, status, create_by, update_by) 
+INSERT INTO wms.sys_role (id, role_code, role_name, description, status, create_by, update_by)
 VALUES (3, 'OPERATOR', '操作员', '操作员负责日常操作', 1, 'system', 'system');
 
 -- Insert default permissions
-INSERT INTO sys_permission (id, permission_code, permission_name, resource_type, parent_id, path, status, create_by, update_by) VALUES
+INSERT INTO wms.sys_permission (id, permission_code, permission_name, resource_type, parent_id, path, status, create_by, update_by) VALUES
 (1, 'product:list', '货品列表', 'button', 0, '', 1, 'system', 'system'),
 (2, 'product:add', '新增货品', 'button', 0, '', 1, 'system', 'system'),
 (3, 'product:edit', '修改货品', 'button', 0, '', 1, 'system', 'system'),
@@ -262,12 +262,12 @@ INSERT INTO sys_permission (id, permission_code, permission_name, resource_type,
 (16, 'dashboard:query', '查看看板', 'button', 0, '', 1, 'system', 'system');
 
 -- Assign admin role to admin user
-INSERT INTO sys_user_role (user_id, role_id) VALUES (1, 1);
+INSERT INTO wms.sys_user_role (user_id, role_id) VALUES (1, 1);
 
 -- Assign all permissions to admin role
-INSERT INTO sys_role_permission (role_id, permission_id) 
-SELECT 1, id FROM sys_permission;
+INSERT INTO wms.sys_role_permission (role_id, permission_id)
+SELECT 1, id FROM wms.sys_permission;
 
 -- Insert default warehouse
-INSERT INTO wms_warehouse (id, warehouse_code, warehouse_name, address, contact_person, contact_phone, status, create_by, update_by) 
+INSERT INTO wms.wms_warehouse (id, warehouse_code, warehouse_name, address, contact_person, contact_phone, status, create_by, update_by)
 VALUES (1, 'WH001', '主仓库', '北京市朝阳区', '张三', '13800138001', 1, 'system', 'system');
