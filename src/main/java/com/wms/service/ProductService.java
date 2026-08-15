@@ -19,5 +19,7 @@ public interface ProductService extends IService<Product> {
 
     void adjustStock(StockAdjustDto dto);
 
+    void batchAdjustStock(com.wms.dto.BatchStockAdjustDto dto);
+
     boolean checkProductCodeExists(String productCode, Long excludeId);
 }

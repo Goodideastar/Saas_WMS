@@ -2,6 +2,7 @@ package com.wms.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.wms.common.Result;
+import com.wms.dto.BatchStockAdjustDto;
 import com.wms.dto.ProductDto;
 import com.wms.dto.ProductQueryDto;
 import com.wms.dto.StockAdjustDto;
@@ -53,6 +54,13 @@ public class ProductController {
     @PreAuthorize("hasAuthority('product:adjust')")
     public Result<Void> adjustStock(@Valid @RequestBody StockAdjustDto dto) {
         productService.adjustStock(dto);
+        return Result.success();
+    }
+
+    @PostMapping("/batchAdjustStock")
+    @PreAuthorize("hasAuthority('product:adjust')")
+    public Result<Void> batchAdjustStock(@Valid @RequestBody BatchStockAdjustDto dto) {
+        productService.batchAdjustStock(dto);
         return Result.success();
     }
 }

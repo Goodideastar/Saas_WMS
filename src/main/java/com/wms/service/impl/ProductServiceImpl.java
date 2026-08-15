@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.wms.dto.BatchStockAdjustDto;
 import com.wms.dto.ProductDto;
 import com.wms.dto.ProductQueryDto;
 import com.wms.dto.StockAdjustDto;
@@ -122,6 +123,19 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         stockLog.setQuantityAfter(quantityAfter);
         stockLog.setRemark(dto.getRemark());
         stockLogMapper.insert(stockLog);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void batchAdjustStock(BatchStockAdjustDto dto) {
+        for (BatchStockAdjustDto.BatchAdjustItem item : dto.getItems()) {
+            StockAdjustDto singleDto = new StockAdjustDto();
+            singleDto.setProductId(item.getProductId());
+            singleDto.setQuantity(item.getQuantity());
+            singleDto.setAdjustType(dto.getAdjustType());
+            singleDto.setRemark(dto.getRemark());
+            adjustStock(singleDto);
+        }
     }
 
     @Override

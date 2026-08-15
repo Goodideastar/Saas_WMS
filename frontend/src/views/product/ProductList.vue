@@ -28,7 +28,7 @@
         <el-button v-permission="'product:adjust'" @click="handleBatchAdjust">批量调整库存</el-button>
       </div>
 
-      <el-table v-loading="loading" :data="tableData" border stripe style="width: 100%">
+      <el-table v-loading="loading" :data="tableData" border stripe style="width: 100%" @selection-change="val => selectedRows.value = val">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="productCode" label="货品编码" />
         <el-table-column prop="productName" label="货品名称" />
@@ -130,6 +130,38 @@
         <el-button type="primary" @click="submitAdjustStock">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="batchDialogVisible" title="批量调整库存" width="700px">
+      <el-form :model="batchForm" label-width="80px">
+        <el-form-item label="调整类型">
+          <el-radio-group v-model="batchForm.adjustType">
+            <el-radio value="IN">入库（增加）</el-radio>
+            <el-radio value="OUT">出库（减少）</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-divider content-position="left">调整明细（{{ batchForm.items.length }} 项）</el-divider>
+        <el-table :data="batchForm.items" border size="small">
+          <el-table-column label="货品名称" width="160">
+            <template #default="{ row }">{{ row.productName }}</template>
+          </el-table-column>
+          <el-table-column label="当前库存" width="90" align="right">
+            <template #default="{ row }">{{ row.currentStock }}</template>
+          </el-table-column>
+          <el-table-column label="调整数量" width="160">
+            <template #default="{ row }">
+              <el-input-number v-model="row.quantity" :min="0" controls-position="right" style="width: 130px" />
+            </template>
+          </el-table-column>
+        </el-table>
+        <el-form-item label="备注">
+          <el-input v-model="batchForm.remark" type="textarea" :rows="2" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="batchDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitBatchAdjust">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -142,6 +174,7 @@ const loading = ref(false)
 const tableData = ref([])
 const dialogVisible = ref(false)
 const stockDialogVisible = ref(false)
+const batchDialogVisible = ref(false)
 const isEdit = ref(false)
 const formRef = ref(null)
 const pagination = reactive({ pageNum: 1, pageSize: 10, total: 0 })
@@ -218,7 +251,25 @@ async function submitAdjustStock() {
   loadData()
 }
 
-function handleBatchAdjust() { ElMessage.info('批量调整功能开发中') }
+function handleBatchAdjust() {
+  const selected = tableData.value.filter(r => selectedRows.value.includes(r))
+  if (selected.length === 0) { ElMessage.warning('请先勾选要调整的货品'); return }
+  batchForm.items = selected.map(r => ({ productId: r.id, productName: r.productName, currentStock: r.currentStock, quantity: 0 }))
+  batchForm.adjustType = 'IN'
+  batchForm.remark = ''
+  batchDialogVisible.value = true
+}
+
+async function submitBatchAdjust() {
+  const invalid = batchForm.items.some(i => i.quantity === 0)
+  if (invalid) { ElMessage.warning('请填写所有货品的调整数量'); return }
+  try {
+    await batchAdjustStock({ items: batchForm.items, adjustType: batchForm.adjustType, remark: batchForm.remark })
+    ElMessage.success('批量调整成功')
+    batchDialogVisible.value = false
+    loadData()
+  } catch (error) {}
+}
 
 onMounted(() => loadData())
 </script>

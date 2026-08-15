@@ -38,3 +38,11 @@ export function adjustStock(data) {
     data
   })
 }
+
+export function batchAdjustStock(data) {
+  return request({
+    url: '/product/batchAdjustStock',
+    method: 'post',
+    data
+  })
+}
