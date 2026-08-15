@@ -1,31 +1,24 @@
 package com.wms.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.wms.dto.PageResult;
 import com.wms.dto.StockAlertHandleDto;
 import com.wms.dto.StockAlertQueryDto;
 import com.wms.dto.StockThresholdDto;
-import com.wms.entity.Product;
 import com.wms.entity.StockAlert;
+import com.wms.entity.StockAlertHandle;
 import com.wms.exception.BusinessException;
 import com.wms.mapper.ProductMapper;
 import com.wms.mapper.StockAlertMapper;
 import com.wms.service.StockAlertService;
 import com.wms.vo.StockAlertVo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class StockAlertServiceImpl implements StockAlertService {
-
-    private static final Logger logger = LoggerFactory.getLogger(StockAlertServiceImpl.class);
 
     private final StockAlertMapper stockAlertMapper;
     private final ProductMapper productMapper;
@@ -37,167 +30,102 @@ public class StockAlertServiceImpl implements StockAlertService {
 
     @Override
     public void checkAndCreateAlerts(Long productId) {
-        Product product = productMapper.selectById(productId);
-        if (product == null) {
-            return;
+        var product = productMapper.selectById(productId);
+        if (product == null) return;
+
+        Integer currentStock = product.getCurrentStock() != null ? product.getCurrentStock() : 0;
+        Integer alertMin = product.getAlertMin();
+        Integer alertMax = product.getAlertMax();
+        if (alertMin == null && alertMax == null) return;
+
+        int existingCount = stockAlertMapper.countByProduct(productId);
+        if (existingCount > 0) return;
+
+        List<String> alerts = new ArrayList<>();
+        if (alertMin != null && currentStock < alertMin) {
+            alerts.add("低于最低库存阈值");
         }
-
-        if (product.getAlertMin() == null && product.getAlertMax() == null) {
-            return;
+        if (alertMax != null && currentStock > alertMax) {
+            alerts.add("高于最高库存阈值");
         }
-
-        int currentStock = product.getCurrentStock() != null ? product.getCurrentStock() : 0;
-
-        if (product.getAlertMin() != null && currentStock < product.getAlertMin()) {
-            LambdaQueryWrapper<StockAlert> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(StockAlert::getProductId, productId)
-                    .eq(StockAlert::getAlertType, "BELOW_MIN")
-                    .eq(StockAlert::getStatus, "UNHANDLED");
-            Long count = stockAlertMapper.selectCount(wrapper);
-            if (count == 0) {
-                StockAlert alert = new StockAlert();
-                alert.setProductId(productId);
-                alert.setAlertType("BELOW_MIN");
-                alert.setAlertValue(product.getAlertMin());
-                alert.setActualStock(currentStock);
-                alert.setStatus("UNHANDLED");
-                stockAlertMapper.insert(alert);
-                logger.warn("Stock alert triggered: Product [{}] current stock {} is below minimum {}",
-                        product.getProductName(), currentStock, product.getAlertMin());
-            }
-        }
-
-        if (product.getAlertMax() != null && currentStock > product.getAlertMax()) {
-            LambdaQueryWrapper<StockAlert> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(StockAlert::getProductId, productId)
-                    .eq(StockAlert::getAlertType, "OVER_STOCK")
-                    .eq(StockAlert::getStatus, "UNHANDLED");
-            Long count = stockAlertMapper.selectCount(wrapper);
-            if (count == 0) {
-                StockAlert alert = new StockAlert();
-                alert.setProductId(productId);
-                alert.setAlertType("OVER_STOCK");
-                alert.setAlertValue(product.getAlertMax());
-                alert.setActualStock(currentStock);
-                alert.setStatus("UNHANDLED");
-                stockAlertMapper.insert(alert);
-                logger.warn("Stock alert triggered: Product [{}] current stock {} is above maximum {}",
-                        product.getProductName(), currentStock, product.getAlertMax());
-            }
+        if (!alerts.isEmpty()) {
+            StockAlert alert = new StockAlert();
+            alert.setProductId(productId);
+            alert.setProductCode(product.getProductCode());
+            alert.setProductName(product.getProductName());
+            alert.setWarehouseId(product.getId());
+            alert.setAlertType(String.join(",", alerts));
+            alert.setAlertValue(alertMin != null ? alertMin : 0);
+            alert.setActualStock(currentStock);
+            alert.setStatus("PENDING");
+            alert.setAlertTime(LocalDateTime.now());
+            alert.setCreateTime(LocalDateTime.now());
+            stockAlertMapper.insert(alert);
         }
     }
 
     @Override
-    public IPage<StockAlertVo> pageQuery(StockAlertQueryDto queryDto) {
-        LambdaQueryWrapper<StockAlert> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(StringUtils.hasText(queryDto.getStatus()), StockAlert::getStatus, queryDto.getStatus())
-                .eq(queryDto.getProductId() != null, StockAlert::getProductId, queryDto.getProductId())
-                .orderByDesc(StockAlert::getCreateTime);
-
+    public PageResult<StockAlertVo> pageQuery(StockAlertQueryDto queryDto) {
         int pageNum = queryDto.getPageNum() != null ? queryDto.getPageNum() : 1;
         int pageSize = queryDto.getPageSize() != null ? queryDto.getPageSize() : 10;
-        Page<StockAlert> page = new Page<>(pageNum, pageSize);
-        IPage<StockAlert> alertPage = stockAlertMapper.selectPage(page, wrapper);
+        int offset = (pageNum - 1) * pageSize;
 
-        IPage<StockAlertVo> voPage = new Page<>(alertPage.getCurrent(), alertPage.getSize(), alertPage.getTotal());
-        voPage.setRecords(alertPage.getRecords().stream().map(this::convertToVo).collect(Collectors.toList()));
-        return voPage;
+        List<StockAlert> records = stockAlertMapper.selectPage(offset, pageSize,
+                queryDto.getStatus(), queryDto.getStartTime(), queryDto.getEndTime());
+        int total = stockAlertMapper.selectCount(queryDto.getStatus(), queryDto.getStartTime(), queryDto.getEndTime());
+
+        List<StockAlertVo> voList = records.stream().map(this::convertToVo).collect(Collectors.toList());
+        return new PageResult<>(voList, total, pageNum, pageSize);
     }
 
     @Override
     public void handleAlert(StockAlertHandleDto dto) {
         StockAlert alert = stockAlertMapper.selectById(dto.getId());
-        if (alert == null) {
-            throw new BusinessException(404, "Alert record not found");
-        }
-        if (!"UNHANDLED".equals(alert.getStatus())) {
-            throw new BusinessException(400, "Alert has been handled already");
-        }
+        if (alert == null) throw new BusinessException(404, "库存预警不存在");
+
+        StockAlertHandle handle = new StockAlertHandle();
+        handle.setAlertId(dto.getId());
+        handle.setHandleTime(LocalDateTime.now());
+        handle.setHandleResult(dto.getHandleRemark());
 
         alert.setStatus("HANDLED");
-        alert.setHandleRemark(dto.getHandleRemark());
-        stockAlertMapper.updateById(alert);
+        alert.setHandleTime(LocalDateTime.now());
+        stockAlertMapper.update(alert);
     }
 
     @Override
     public void batchUpdateThresholds(List<StockThresholdDto> thresholds) {
         for (StockThresholdDto dto : thresholds) {
-            Product product = productMapper.selectById(dto.getProductId());
+            var product = productMapper.selectById(dto.getProductId());
             if (product != null) {
-                if (dto.getAlertMin() != null) {
-                    product.setAlertMin(dto.getAlertMin());
-                }
-                if (dto.getAlertMax() != null) {
-                    product.setAlertMax(dto.getAlertMax());
-                }
-                productMapper.updateById(product);
+                product.setAlertMin(dto.getAlertMin());
+                product.setAlertMax(dto.getAlertMax());
+                productMapper.update(product);
             }
         }
     }
 
     @Override
-    public java.util.Map<String, Object> getStats() {
-        java.util.Map<String, Object> stats = new java.util.HashMap<>();
-
-        LambdaQueryWrapper<StockAlert> totalWrapper = new LambdaQueryWrapper<>();
-        Long total = stockAlertMapper.selectCount(totalWrapper);
-        stats.put("total", total);
-
-        LambdaQueryWrapper<StockAlert> pendingWrapper = new LambdaQueryWrapper<>();
-        pendingWrapper.eq(StockAlert::getStatus, "UNHANDLED");
-        Long pending = stockAlertMapper.selectCount(pendingWrapper);
-        stats.put("unhandled", pending);
-
-        LambdaQueryWrapper<StockAlert> todayWrapper = new LambdaQueryWrapper<>();
-        todayWrapper.eq(StockAlert::getStatus, "UNHANDLED")
-                .ge(StockAlert::getCreateTime, java.time.LocalDate.now().atStartOfDay());
-        Long todayNew = stockAlertMapper.selectCount(todayWrapper);
-        stats.put("todayNew", todayNew);
-
-        LambdaQueryWrapper<StockAlert> handledWrapper = new LambdaQueryWrapper<>();
-        handledWrapper.eq(StockAlert::getStatus, "HANDLED");
-        Long handled = stockAlertMapper.selectCount(handledWrapper);
-        stats.put("handled", handled);
-
-        return stats;
+    public Map<String, Object> getStats() {
+        int total = stockAlertMapper.selectCount(null, null, null);
+        int pending = stockAlertMapper.countByStatus("PENDING");
+        int today = stockAlertMapper.countToday();
+        return Map.of("total", total, "pending", pending, "today", today);
     }
 
-    @Scheduled(cron = "0 0 2 * * ?")
-    public void scheduledCheckAlerts() {
-        logger.info("Starting scheduled stock alert check");
-        LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Product::getStatus, 1);
-        List<Product> products = productMapper.selectList(wrapper);
-
-        for (Product product : products) {
-            try {
-                checkAndCreateAlerts(product.getId());
-            } catch (Exception e) {
-                logger.error("Stock alert check exception, ProductId: {}", product.getId(), e);
-            }
-        }
-        logger.info("Scheduled stock alert check completed, checked {} products", products.size());
-    }
-
-    private StockAlertVo convertToVo(StockAlert alert) {
+    private StockAlertVo convertToVo(StockAlert a) {
         StockAlertVo vo = new StockAlertVo();
-        vo.setId(alert.getId());
-        vo.setProductId(alert.getProductId());
-        vo.setWarehouseId(alert.getWarehouseId());
-        vo.setAlertType(alert.getAlertType());
-        vo.setAlertValue(alert.getAlertValue());
-        vo.setActualStock(alert.getActualStock());
-        vo.setStatus(alert.getStatus());
-        vo.setHandleRemark(alert.getHandleRemark());
-        vo.setCreateBy(alert.getCreateBy());
-        vo.setCreateTime(alert.getCreateTime());
-
-        Product product = productMapper.selectById(alert.getProductId());
-        if (product != null) {
-            vo.setProductCode(product.getProductCode());
-            vo.setProductName(product.getProductName());
-        }
-
+        vo.setId(a.getId());
+        vo.setProductId(a.getProductId());
+        vo.setProductCode(a.getProductCode());
+        vo.setProductName(a.getProductName());
+        vo.setWarehouseId(a.getWarehouseId());
+        vo.setAlertType(a.getAlertType());
+        vo.setAlertValue(a.getAlertValue());
+        vo.setActualStock(a.getActualStock());
+        vo.setStatus(a.getStatus());
+        vo.setHandleRemark(a.getHandleRemark());
+        vo.setCreateTime(a.getCreateTime());
         return vo;
     }
 }

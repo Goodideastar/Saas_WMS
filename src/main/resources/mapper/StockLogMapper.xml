@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wms.mapper.StockLogMapper">
+
+    <insert id="insert" parameterType="com.wms.entity.StockLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO stock_log (product_id, product_code, product_name, stock_type, quantity,
+                               before_stock, after_stock, order_id, create_time)
+        VALUES (#{productId}, #{productCode}, #{productName}, #{stockType}, #{quantity},
+                #{beforeStock}, #{afterStock}, #{orderId}, #{createTime})
+    </insert>
+
+    <select id="selectByProductId" resultType="com.wms.entity.StockLog">
+        SELECT * FROM stock_log
+        WHERE product_id = #{productId} AND is_deleted = 0
+        ORDER BY create_time DESC
+        LIMIT 20
+    </select>
+
+</mapper>

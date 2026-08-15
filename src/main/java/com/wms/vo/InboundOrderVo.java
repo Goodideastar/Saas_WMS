@@ -16,6 +16,7 @@ public class InboundOrderVo {
     private String relatedOrderNo;
     private Long operatorId;
     private String status;
+    private java.math.BigDecimal totalAmount;
     private LocalDateTime inboundTime;
     private String remark;
     private String createBy;

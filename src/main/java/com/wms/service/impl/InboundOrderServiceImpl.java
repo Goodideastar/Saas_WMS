@@ -1,173 +1,112 @@
 package com.wms.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.wms.dto.InboundOrderDto;
 import com.wms.dto.InboundOrderItemDto;
 import com.wms.dto.InboundOrderQueryDto;
+import com.wms.dto.PageResult;
 import com.wms.entity.InboundOrder;
 import com.wms.entity.InboundOrderItem;
-import com.wms.entity.Product;
-import com.wms.entity.StockLog;
 import com.wms.exception.BusinessException;
-import com.wms.mapper.InboundOrderItemMapper;
 import com.wms.mapper.InboundOrderMapper;
 import com.wms.mapper.ProductMapper;
-import com.wms.mapper.StockLogMapper;
 import com.wms.service.InboundOrderService;
-import com.wms.service.StockAlertService;
 import com.wms.vo.InboundOrderVo;
-import lombok.RequiredArgsConstructor;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
-public class InboundOrderServiceImpl extends ServiceImpl<InboundOrderMapper, InboundOrder>
-        implements InboundOrderService {
-
-    private static final Logger logger = LoggerFactory.getLogger(InboundOrderServiceImpl.class);
+public class InboundOrderServiceImpl implements InboundOrderService {
 
     private final InboundOrderMapper inboundOrderMapper;
-    private final InboundOrderItemMapper inboundOrderItemMapper;
     private final ProductMapper productMapper;
-    private final StockLogMapper stockLogMapper;
-    private final StockAlertService stockAlertService;
-    private final RedissonClient redissonClient;
+    private final com.wms.mapper.StockLogMapper stockLogMapper;
+
+    public InboundOrderServiceImpl(InboundOrderMapper inboundOrderMapper, ProductMapper productMapper,
+                                   com.wms.mapper.StockLogMapper stockLogMapper) {
+        this.inboundOrderMapper = inboundOrderMapper;
+        this.productMapper = productMapper;
+        this.stockLogMapper = stockLogMapper;
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void createInboundOrder(InboundOrderDto dto) {
+        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        Long seq = inboundOrderMapper.selectSeq();
+        String orderNo = "IN" + dateStr + String.format("%04d", seq + 1);
+
         InboundOrder order = new InboundOrder();
-        order.setOrderNo(generateOrderNo());
+        order.setOrderNo(orderNo);
         order.setWarehouseId(dto.getWarehouseId());
-        order.setSupplier(dto.getSupplier());
         order.setInboundType(dto.getInboundType());
+        order.setSupplier(dto.getSupplier());
         order.setRelatedOrderNo(dto.getRelatedOrderNo());
         order.setStatus("PENDING");
+        order.setTotalAmount(BigDecimal.ZERO);
         order.setRemark(dto.getRemark());
+        order.setCreateTime(LocalDateTime.now());
         inboundOrderMapper.insert(order);
 
-        for (InboundOrderItemDto itemDto : dto.getItems()) {
-            InboundOrderItem item = new InboundOrderItem();
-            item.setInboundOrderId(order.getId());
-            item.setProductId(itemDto.getProductId());
-            item.setExpectedQuantity(itemDto.getExpectedQuantity());
-            item.setActualQuantity(
-                    itemDto.getActualQuantity() != null ? itemDto.getActualQuantity() : itemDto.getExpectedQuantity());
-            item.setUnitPrice(itemDto.getUnitPrice());
-            if (itemDto.getUnitPrice() != null) {
-                item.setSubtotal(itemDto.getUnitPrice().multiply(BigDecimal.valueOf(item.getActualQuantity())));
+        if (dto.getItems() != null && !dto.getItems().isEmpty()) {
+            BigDecimal total = BigDecimal.ZERO;
+            for (InboundOrderItemDto itemDto : dto.getItems()) {
+                InboundOrderItem item = new InboundOrderItem();
+                item.setOrderId(order.getId());
+                item.setProductId(itemDto.getProductId());
+                item.setExpectedQuantity(itemDto.getExpectedQuantity());
+                item.setActualQuantity(itemDto.getActualQuantity() != null ? itemDto.getActualQuantity() : 0);
+                item.setUnitPrice(itemDto.getUnitPrice() != null ? itemDto.getUnitPrice() : BigDecimal.ZERO);
+                BigDecimal subtotal = item.getUnitPrice()
+                        .multiply(BigDecimal.valueOf(item.getActualQuantity() != null ? item.getActualQuantity() : 0));
+                item.setSubtotal(subtotal);
+                total = total.add(subtotal);
+                inboundOrderMapper.insertItem(item);
             }
-            item.setBatchNo(itemDto.getBatchNo());
-            item.setProductionDate(itemDto.getProductionDate());
-            item.setExpiryDate(itemDto.getExpiryDate());
-            inboundOrderItemMapper.insert(item);
+            order.setTotalAmount(total);
+            inboundOrderMapper.update(order);
         }
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @CacheEvict(value = "dashboard", allEntries = true)
     public void auditInboundOrder(Long id) {
-        logger.info("========== START: Audit Inbound Order ==========");
-        logger.info("[InboundAudit] Order ID: {}", id);
-
-        InboundOrder order = inboundOrderMapper.selectForUpdate(id);
+        InboundOrder order = inboundOrderMapper.selectById(id);
         if (order == null) {
-            logger.error("[InboundAudit] Order not found, ID: {}", id);
-            throw new BusinessException(404, "Inbound order not found");
+            throw new BusinessException(404, "入库单不存在");
         }
-        logger.info(
-                "[InboundAudit] Order details - OrderNo: {}, WarehouseId: {}, Supplier: {}, InboundType: {}, Status: {}",
-                order.getOrderNo(), order.getWarehouseId(), order.getSupplier(),
-                order.getInboundType(), order.getStatus());
-
         if (!"PENDING".equals(order.getStatus())) {
-            logger.error("[InboundAudit] Order status not allowed for audit - OrderNo: {}, CurrentStatus: {}",
-                    order.getOrderNo(), order.getStatus());
-            throw new BusinessException(400, "Order status not allowed for audit");
+            throw new BusinessException(400, "该入库单不允许审核");
         }
 
-        LambdaQueryWrapper<InboundOrderItem> itemWrapper = new LambdaQueryWrapper<>();
-        itemWrapper.eq(InboundOrderItem::getInboundOrderId, id);
-        List<InboundOrderItem> items = inboundOrderItemMapper.selectList(itemWrapper);
-        logger.info("[InboundAudit] Number of order items: {}", items.size());
-
+        List<InboundOrderItem> items = inboundOrderMapper.selectItemsByOrderId(id);
+        BigDecimal total = BigDecimal.ZERO;
         for (InboundOrderItem item : items) {
-            logger.info(
-                    "[InboundAudit] Processing item - ItemId: {}, ProductId: {}, ExpectedQty: {}, ActualQty: {}, UnitPrice: {}",
-                    item.getId(), item.getProductId(), item.getExpectedQuantity(),
-                    item.getActualQuantity(), item.getUnitPrice());
-
-            Product product = productMapper.selectById(item.getProductId());
-            if (product == null) {
-                logger.error("[InboundAudit] Product not found, ProductId: {}", item.getProductId());
-                throw new BusinessException(404, "Product not found: " + item.getProductId());
+            if (item.getActualQuantity() == null || item.getActualQuantity() <= 0) {
+                throw new BusinessException(400, "请完成实入数量录入: " + item.getProductName());
             }
-            logger.info("[InboundAudit] Product info - Code: {}, Name: {}, CurrentStock: {}, Category: {}, Status: {}",
-                    product.getProductCode(), product.getProductName(),
-                    product.getCurrentStock(), product.getCategory(), product.getStatus());
-
-            int quantityBefore = product.getCurrentStock() != null ? product.getCurrentStock() : 0;
-            int quantityChange = item.getActualQuantity() != null ? item.getActualQuantity()
-                    : item.getExpectedQuantity();
-            int quantityAfter = quantityBefore + quantityChange;
-
-            logger.info(
-                    "[InboundAudit] Stock change calculation - Product: {} ({}), Before: {}, Change: +{}, After: {}",
-                    product.getProductName(), product.getProductCode(),
-                    quantityBefore, quantityChange, quantityAfter);
-
-            LambdaQueryWrapper<Product> updateWrapper = new LambdaQueryWrapper<>();
-            updateWrapper.eq(Product::getId, product.getId())
-                    .eq(Product::getVersion, product.getVersion());
-            product.setCurrentStock(quantityAfter);
-            product.setVersion(product.getVersion() + 1);
-            int updateResult = productMapper.update(product, updateWrapper);
-            logger.info("[InboundAudit] Optimistic lock update result - AffectedRows: {}", updateResult);
-
-            if (updateResult == 0) {
-                logger.error("[InboundAudit] Optimistic lock update failed! ProductId: {}, Another transaction may have modified this record",
-                        product.getId());
-                throw new BusinessException(400, "Stock update failed, please retry");
+            int beforeStock = item.getProductId() != null ? getProductStock(item.getProductId()) : 0;
+            int afterStock = beforeStock + item.getActualQuantity();
+            if (item.getProductId() != null) {
+                productMapper.updateVersionById(item.getProductId(), 0, afterStock);
             }
-
-            StockLog stockLog = new StockLog();
-            stockLog.setProductId(product.getId());
-            stockLog.setOperationType("INBOUND");
-            stockLog.setQuantityBefore(quantityBefore);
-            stockLog.setQuantityChange(quantityChange);
-            stockLog.setQuantityAfter(quantityAfter);
-            stockLog.setRelatedOrderNo(order.getOrderNo());
-            stockLogMapper.insert(stockLog);
-            logger.info("[InboundAudit] Stock log created - LogId: {}", stockLog.getId());
-
-            logger.info("[InboundAudit] Triggering stock alert check - ProductId: {}", product.getId());
-            stockAlertService.checkAndCreateAlerts(product.getId());
+            total = total.add(item.getUnitPrice() != null
+                    ? item.getUnitPrice().multiply(BigDecimal.valueOf(item.getActualQuantity()))
+                    : BigDecimal.ZERO);
+            createStockLog(item.getProductId(), item.getProductCode(), item.getProductName(), "IN",
+                    item.getActualQuantity(), beforeStock, afterStock, id);
         }
 
         order.setStatus("COMPLETED");
         order.setInboundTime(LocalDateTime.now());
-        inboundOrderMapper.updateById(order);
-        logger.info("[InboundAudit] Order status updated to 'completed', InboundTime: {}", order.getInboundTime());
-        logger.info("========== END: Audit Inbound Order - OrderNo: {} ==========", order.getOrderNo());
+        order.setTotalAmount(total);
+        inboundOrderMapper.update(order);
     }
 
     @Override
@@ -175,32 +114,53 @@ public class InboundOrderServiceImpl extends ServiceImpl<InboundOrderMapper, Inb
     public void cancelInboundOrder(Long id) {
         InboundOrder order = inboundOrderMapper.selectById(id);
         if (order == null) {
-            throw new BusinessException(404, "Inbound order not found");
+            throw new BusinessException(404, "入库单不存在");
         }
         if (!"PENDING".equals(order.getStatus())) {
-            throw new BusinessException(400, "Order status not allowed for cancellation");
+            throw new BusinessException(400, "只有待审核状态的入库单可以取消");
         }
-
         order.setStatus("CANCELLED");
-        inboundOrderMapper.updateById(order);
+        inboundOrderMapper.update(order);
     }
 
     @Override
-    public IPage<InboundOrderVo> pageQuery(InboundOrderQueryDto queryDto) {
-        LambdaQueryWrapper<InboundOrder> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(queryDto.getOrderNo()), InboundOrder::getOrderNo, queryDto.getOrderNo())
-                .eq(StringUtils.hasText(queryDto.getStatus()), InboundOrder::getStatus, queryDto.getStatus())
-                .ge(queryDto.getStartTime() != null, InboundOrder::getCreateTime, queryDto.getStartTime())
-                .le(queryDto.getEndTime() != null, InboundOrder::getCreateTime, queryDto.getEndTime())
-                .orderByDesc(InboundOrder::getCreateTime);
+    public PageResult<InboundOrderVo> pageQuery(InboundOrderQueryDto queryDto) {
+        int pageNum = queryDto.getPageNum() != null ? queryDto.getPageNum() : 1;
+        int pageSize = queryDto.getPageSize() != null ? queryDto.getPageSize() : 10;
+        int offset = (pageNum - 1) * pageSize;
 
-        Page<InboundOrder> page = new Page<>(queryDto.getPageNum() != null ? queryDto.getPageNum() : 1,
-                queryDto.getPageSize() != null ? queryDto.getPageSize() : 10);
-        IPage<InboundOrder> orderPage = inboundOrderMapper.selectPage(page, wrapper);
+        List<InboundOrder> records = inboundOrderMapper.selectPage(offset, pageSize,
+                queryDto.getOrderNo(), queryDto.getStatus(),
+                queryDto.getStartTime(), queryDto.getEndTime());
+        int total = inboundOrderMapper.selectCount(
+                queryDto.getOrderNo(), queryDto.getStatus(),
+                queryDto.getStartTime(), queryDto.getEndTime());
 
-        IPage<InboundOrderVo> voPage = new Page<>(orderPage.getCurrent(), orderPage.getSize(), orderPage.getTotal());
-        voPage.setRecords(orderPage.getRecords().stream().map(this::convertToVo).collect(Collectors.toList()));
-        return voPage;
+        List<InboundOrderVo> voList = records.stream()
+                .map(this::convertToVo)
+                .collect(Collectors.toList());
+        return new PageResult<>(voList, total, pageNum, pageSize);
+    }
+
+    private int getProductStock(Long productId) {
+        if (productId == null) return 0;
+        var product = productMapper.selectById(productId);
+        return product != null ? (product.getCurrentStock() != null ? product.getCurrentStock() : 0) : 0;
+    }
+
+    private void createStockLog(Long productId, String productCode, String productName,
+                                String stockType, int quantity, int before, int after, Long orderId) {
+        com.wms.entity.StockLog log = new com.wms.entity.StockLog();
+        log.setProductId(productId);
+        log.setProductCode(productCode);
+        log.setProductName(productName);
+        log.setStockType(stockType);
+        log.setQuantity(quantity);
+        log.setBeforeStock(before);
+        log.setAfterStock(after);
+        log.setOrderId(orderId);
+        log.setCreateTime(LocalDateTime.now());
+        stockLogMapper.insert(log);
     }
 
     private InboundOrderVo convertToVo(InboundOrder order) {
@@ -208,67 +168,27 @@ public class InboundOrderServiceImpl extends ServiceImpl<InboundOrderMapper, Inb
         vo.setId(order.getId());
         vo.setOrderNo(order.getOrderNo());
         vo.setWarehouseId(order.getWarehouseId());
-        vo.setSupplier(order.getSupplier());
         vo.setInboundType(order.getInboundType());
+        vo.setSupplier(order.getSupplier());
         vo.setRelatedOrderNo(order.getRelatedOrderNo());
-        vo.setOperatorId(order.getOperatorId());
         vo.setStatus(order.getStatus());
-        vo.setInboundTime(order.getInboundTime());
+        vo.setTotalAmount(order.getTotalAmount());
         vo.setRemark(order.getRemark());
-        vo.setCreateBy(order.getCreateBy());
         vo.setCreateTime(order.getCreateTime());
-
-        LambdaQueryWrapper<InboundOrderItem> itemWrapper = new LambdaQueryWrapper<>();
-        itemWrapper.eq(InboundOrderItem::getInboundOrderId, order.getId());
-        List<InboundOrderItem> items = inboundOrderItemMapper.selectList(itemWrapper);
-        vo.setItems(items.stream().map(item -> {
-            InboundOrderVo.InboundOrderItemVo itemVo = new InboundOrderVo.InboundOrderItemVo();
-            itemVo.setId(item.getId());
-            itemVo.setInboundOrderId(item.getInboundOrderId());
-            itemVo.setProductId(item.getProductId());
-            itemVo.setExpectedQuantity(item.getExpectedQuantity());
-            itemVo.setActualQuantity(item.getActualQuantity());
-            itemVo.setUnitPrice(item.getUnitPrice());
-            itemVo.setSubtotal(item.getSubtotal());
-            itemVo.setBatchNo(item.getBatchNo());
-            itemVo.setProductionDate(item.getProductionDate());
-            itemVo.setExpiryDate(item.getExpiryDate());
-
-            Product product = productMapper.selectById(item.getProductId());
-            if (product != null) {
-                itemVo.setProductName(product.getProductName());
-                itemVo.setProductCode(product.getProductCode());
-            }
-            return itemVo;
-        }).collect(Collectors.toList()));
-
+        List<InboundOrderItem> items = inboundOrderMapper.selectItemsByOrderId(order.getId());
+        List<InboundOrderVo.InboundOrderItemVo> itemVos = items.stream().map(item -> {
+            InboundOrderVo.InboundOrderItemVo iv = new InboundOrderVo.InboundOrderItemVo();
+            iv.setId(item.getId());
+            iv.setProductId(item.getProductId());
+            iv.setProductCode(item.getProductCode());
+            iv.setProductName(item.getProductName());
+            iv.setExpectedQuantity(item.getExpectedQuantity());
+            iv.setActualQuantity(item.getActualQuantity());
+            iv.setUnitPrice(item.getUnitPrice());
+            iv.setSubtotal(item.getSubtotal());
+            return iv;
+        }).collect(Collectors.toList());
+        vo.setItems(itemVos);
         return vo;
-    }
-
-    private String generateOrderNo() {
-        RLock lock = redissonClient.getLock("order-no-lock:inbound");
-        try {
-            lock.lockInterruptibly(10, TimeUnit.SECONDS);
-            String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-            LambdaQueryWrapper<InboundOrder> wrapper = new LambdaQueryWrapper<>();
-            wrapper.likeRight(InboundOrder::getOrderNo, "IN" + dateStr)
-                    .orderByDesc(InboundOrder::getOrderNo)
-                    .last("LIMIT 1");
-            InboundOrder lastOrder = inboundOrderMapper.selectOne(wrapper);
-
-            int sequence = 1;
-            if (lastOrder != null && lastOrder.getOrderNo().startsWith("IN" + dateStr)) {
-                String lastSeq = lastOrder.getOrderNo().substring(("IN" + dateStr).length());
-                sequence = Integer.parseInt(lastSeq) + 1;
-            }
-            return "IN" + dateStr + String.format("%04d", sequence);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new BusinessException(500, "Failed to generate order number");
-        } finally {
-            if (lock.isHeldByCurrentThread()) {
-                lock.unlock();
-            }
-        }
     }
 }

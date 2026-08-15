@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wms.mapper.OutboundOrderMapper">
+
+    <resultMap id="BaseResultMap" type="com.wms.entity.OutboundOrder">
+        <id column="id" property="id"/>
+        <result column="order_no" property="orderNo"/>
+        <result column="warehouse_id" property="warehouseId"/>
+        <result column="outbound_type" property="outboundType"/>
+        <result column="customer" property="customer"/>
+        <result column="related_order_no" property="relatedOrderNo"/>
+        <result column="status" property="status"/>
+        <result column="total_amount" property="totalAmount"/>
+        <result column="remark" property="remark"/>
+        <result column="outbound_time" property="outboundTime"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="create_by" property="createBy"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="is_deleted" property="isDeleted"/>
+        <result column="version" property="version"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, order_no, warehouse_id, outbound_type, customer, related_order_no, status, total_amount,
+        remark, outbound_time, create_time, update_time, create_by, update_by, is_deleted, version
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM outbound_order WHERE id = #{id} AND is_deleted = 0
+    </select>
+
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM outbound_order
+        <where>
+            is_deleted = 0
+            <if test="orderNo != null and orderNo != ''">AND order_no LIKE CONCAT('%', #{orderNo}, '%')</if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+            <if test="startTime != null">AND create_time &gt;= #{startTime}</if>
+            <if test="endTime != null">AND create_time &lt;= #{endTime}</if>
+        </where>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="selectCount" resultType="int">
+        SELECT COUNT(*) FROM outbound_order
+        <where>
+            is_deleted = 0
+            <if test="orderNo != null and orderNo != ''">AND order_no LIKE CONCAT('%', #{orderNo}, '%')</if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+            <if test="startTime != null">AND create_time &gt;= #{startTime}</if>
+            <if test="endTime != null">AND create_time &lt;= #{endTime}</if>
+        </where>
+    </select>
+
+    <insert id="insert" parameterType="com.wms.entity.OutboundOrder" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO outbound_order (order_no, warehouse_id, outbound_type, customer, related_order_no,
+                                    status, total_amount, remark, create_time, update_time, create_by, is_deleted, version)
+        VALUES (#{orderNo}, #{warehouseId}, #{outboundType}, #{customer}, #{relatedOrderNo},
+                #{status}, #{totalAmount}, #{remark}, #{createTime}, #{updateTime}, #{createBy}, 0, 0)
+    </insert>
+
+    <update id="update" parameterType="com.wms.entity.OutboundOrder">
+        UPDATE outbound_order
+        <set>
+            <if test="outboundType != null">outbound_type = #{outboundType},</if>
+            <if test="customer != null">customer = #{customer},</if>
+            <if test="relatedOrderNo != null">related_order_no = #{relatedOrderNo},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="totalAmount != null">total_amount = #{totalAmount},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="outboundTime != null">outbound_time = #{outboundTime},</if>
+            update_time = #{updateTime},
+            update_by = #{updateBy},
+            version = version + 1
+        </set>
+        WHERE id = #{id} AND is_deleted = 0
+    </update>
+
+    <update id="softDeleteById">
+        UPDATE outbound_order SET is_deleted = 1, update_time = NOW() WHERE id = #{id}
+    </update>
+
+    <insert id="insertItem" parameterType="com.wms.entity.OutboundOrderItem" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO outbound_order_item (order_id, product_id, product_code, product_name,
+                                          expected_quantity, actual_quantity, unit_price, subtotal, create_time)
+        VALUES (#{orderId}, #{productId}, #{productCode}, #{productName},
+                #{expectedQuantity}, #{actualQuantity}, #{unitPrice}, #{subtotal}, #{createTime})
+    </insert>
+    <select id="selectItemsByOrderId" resultType="com.wms.entity.OutboundOrderItem">
+        SELECT id, order_id AS orderId, product_id AS productId, product_code AS productCode,
+               product_name AS productName, expected_quantity AS expectedQuantity,
+               actual_quantity AS actualQuantity, unit_price, subtotal,
+               create_time AS createTime, update_time AS updateTime
+        FROM outbound_order_item WHERE order_id = #{orderId} AND is_deleted = 0
+    </select>
+
+    <select id="selectSeq" resultType="long">
+        SELECT IFNULL(MAX(CAST(SUBSTRING(order_no, 11) AS UNSIGNED)), 0)
+        FROM outbound_order
+        WHERE order_no LIKE CONCAT('OUT', DATE_FORMAT(NOW(), '%Y%m%d'), '%') AND is_deleted = 0
+    </select>
+
+    <select id="countByStatus" resultType="int">
+        SELECT COUNT(*) FROM outbound_order WHERE status = #{status} AND is_deleted = 0
+    </select>
+
+</mapper>

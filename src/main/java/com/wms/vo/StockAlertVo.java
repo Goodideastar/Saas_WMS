@@ -17,5 +17,7 @@ public class StockAlertVo {
     private String status;
     private String handleRemark;
     private String createBy;
+    private LocalDateTime alertTime;
+    private LocalDateTime handleTime;
     private LocalDateTime createTime;
 }

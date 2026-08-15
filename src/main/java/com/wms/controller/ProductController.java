@@ -1,11 +1,11 @@
 package com.wms.controller;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.wms.common.Result;
 import com.wms.dto.BatchStockAdjustDto;
 import com.wms.dto.ProductDto;
 import com.wms.dto.ProductQueryDto;
 import com.wms.dto.StockAdjustDto;
+import com.wms.dto.PageResult;
 import com.wms.service.ProductService;
 import com.wms.vo.ProductVo;
 import jakarta.validation.Valid;
@@ -24,8 +24,8 @@ public class ProductController {
 
     @GetMapping("/page")
     @PreAuthorize("hasAuthority('product:list')")
-    public Result<IPage<ProductVo>> pageQuery(@Validated ProductQueryDto queryDto) {
-        IPage<ProductVo> page = productService.pageQuery(queryDto);
+    public Result<PageResult<ProductVo>> pageQuery(@Validated ProductQueryDto queryDto) {
+        PageResult<ProductVo> page = productService.pageQuery(queryDto);
         return Result.success(page);
     }
 

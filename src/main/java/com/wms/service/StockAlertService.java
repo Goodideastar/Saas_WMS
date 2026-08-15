@@ -1,19 +1,18 @@
 package com.wms.service;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.wms.dto.PageResult;
 import com.wms.dto.StockAlertHandleDto;
 import com.wms.dto.StockAlertQueryDto;
+import com.wms.dto.StockThresholdDto;
 import com.wms.vo.StockAlertVo;
 
+import java.util.List;
+import java.util.Map;
+
 public interface StockAlertService {
-
     void checkAndCreateAlerts(Long productId);
-
-    IPage<StockAlertVo> pageQuery(StockAlertQueryDto queryDto);
-
+    PageResult<StockAlertVo> pageQuery(StockAlertQueryDto queryDto);
     void handleAlert(StockAlertHandleDto dto);
-
-    void batchUpdateThresholds(java.util.List<com.wms.dto.StockThresholdDto> thresholds);
-
-    java.util.Map<String, Object> getStats();
+    void batchUpdateThresholds(List<StockThresholdDto> thresholds);
+    Map<String, Object> getStats();
 }

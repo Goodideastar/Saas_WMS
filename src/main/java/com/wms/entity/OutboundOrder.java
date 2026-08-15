@@ -1,22 +1,24 @@
 package com.wms.entity;
 
-import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("wms_outbound_order")
 public class OutboundOrder extends BaseEntity {
     private String orderNo;
     private Long warehouseId;
-    private String customer;
     private String outboundType;
+    private String customer;
     private String relatedOrderNo;
-    private Long operatorId;
     private String status;
-    private LocalDateTime outboundTime;
+    private BigDecimal totalAmount;
     private String remark;
+    private LocalDateTime outboundTime;
+    private List<OutboundOrderItem> items;
 }

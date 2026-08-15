@@ -1,6 +1,5 @@
 package com.wms.security;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.wms.entity.Permission;
 import com.wms.entity.Role;
 import com.wms.entity.RolePermission;
@@ -35,8 +34,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userMapper.selectOne(
-                new LambdaQueryWrapper<User>().eq(User::getUsername, username));
+        User user = userMapper.selectByUsername(username);
 
         if (user == null) {
             throw new UsernameNotFoundException("User not found: " + username);
@@ -45,12 +43,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
         authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
 
-        List<Long> roleIds = userRoleMapper.selectList(
-                new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, user.getId()))
-                .stream().map(UserRole::getRoleId).collect(Collectors.toList());
+        List<UserRole> userRoles = userRoleMapper.selectByUserId(user.getId());
+        List<Long> roleIds = userRoles.stream().map(UserRole::getRoleId).collect(Collectors.toList());
 
         if (!roleIds.isEmpty()) {
-            List<Role> roles = roleMapper.selectBatchIds(roleIds).stream()
+            List<Role> roles = roleMapper.selectByIds(roleIds).stream()
                     .filter(r -> r.getStatus() != null && r.getStatus() == 1)
                     .collect(Collectors.toList());
 
@@ -60,12 +57,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
             List<Long> roleIdList = roles.stream().map(Role::getId).collect(Collectors.toList());
             if (!roleIdList.isEmpty()) {
-                Set<Long> permissionIds = rolePermissionMapper.selectList(
-                        new LambdaQueryWrapper<RolePermission>().in(RolePermission::getRoleId, roleIdList))
+                Set<Long> permissionIds = rolePermissionMapper.selectByRoleIds(roleIdList)
                         .stream().map(RolePermission::getPermissionId).collect(Collectors.toSet());
 
                 if (!permissionIds.isEmpty()) {
-                    permissionMapper.selectBatchIds(permissionIds).stream()
+                    permissionMapper.selectByIds(new ArrayList<>(permissionIds)).stream()
                             .filter(p -> p.getStatus() != null && p.getStatus() == 1)
                             .map(Permission::getPermissionCode)
                             .map(SimpleGrantedAuthority::new)

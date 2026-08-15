@@ -1,9 +1,9 @@
 package com.wms.controller;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.wms.common.Result;
 import com.wms.dto.OutboundOrderDto;
 import com.wms.dto.OutboundOrderQueryDto;
+import com.wms.dto.PageResult;
 import com.wms.service.OutboundOrderService;
 import com.wms.vo.OutboundOrderVo;
 import jakarta.validation.Valid;
@@ -43,8 +43,8 @@ public class OutboundOrderController {
 
     @GetMapping("/page")
     @PreAuthorize("hasAuthority('outbound:query')")
-    public Result<IPage<OutboundOrderVo>> pageQuery(@Validated OutboundOrderQueryDto queryDto) {
-        IPage<OutboundOrderVo> page = outboundOrderService.pageQuery(queryDto);
+    public Result<PageResult<OutboundOrderVo>> pageQuery(@Validated OutboundOrderQueryDto queryDto) {
+        PageResult<OutboundOrderVo> page = outboundOrderService.pageQuery(queryDto);
         return Result.success(page);
     }
 

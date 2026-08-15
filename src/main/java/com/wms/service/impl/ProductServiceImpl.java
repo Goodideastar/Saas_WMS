@@ -1,132 +1,131 @@
 package com.wms.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.wms.dto.BatchStockAdjustDto;
+import com.wms.dto.PageResult;
 import com.wms.dto.ProductDto;
 import com.wms.dto.ProductQueryDto;
 import com.wms.dto.StockAdjustDto;
 import com.wms.entity.Product;
-import com.wms.entity.StockLog;
 import com.wms.exception.BusinessException;
 import com.wms.mapper.ProductMapper;
 import com.wms.mapper.StockLogMapper;
 import com.wms.service.ProductService;
 import com.wms.vo.ProductVo;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
-@RequiredArgsConstructor
-public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> implements ProductService {
+public class ProductServiceImpl implements ProductService {
 
     private final ProductMapper productMapper;
     private final StockLogMapper stockLogMapper;
 
-    @Override
-    public IPage<ProductVo> pageQuery(ProductQueryDto queryDto) {
-        LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(queryDto.getProductCode()), Product::getProductCode, queryDto.getProductCode())
-                .like(StringUtils.hasText(queryDto.getProductName()), Product::getProductName, queryDto.getProductName())
-                .eq(StringUtils.hasText(queryDto.getCategory()), Product::getCategory, queryDto.getCategory())
-                .eq(queryDto.getStatus() != null, Product::getStatus, queryDto.getStatus())
-                .orderByDesc(Product::getCreateTime);
-
-        Page<Product> page = new Page<>(queryDto.getPageNum() != null ? queryDto.getPageNum() : 1,
-                queryDto.getPageSize() != null ? queryDto.getPageSize() : 10);
-        IPage<Product> productPage = productMapper.selectPage(page, wrapper);
-
-        IPage<ProductVo> voPage = new Page<>(productPage.getCurrent(), productPage.getSize(), productPage.getTotal());
-        voPage.setRecords(productPage.getRecords().stream().map(this::convertToVo).toList());
-        return voPage;
+    public ProductServiceImpl(ProductMapper productMapper, StockLogMapper stockLogMapper) {
+        this.productMapper = productMapper;
+        this.stockLogMapper = stockLogMapper;
     }
 
     @Override
-    @CacheEvict(value = "product", allEntries = true)
+    public PageResult<ProductVo> pageQuery(ProductQueryDto queryDto) {
+        int pageNum = queryDto.getPageNum() != null ? queryDto.getPageNum() : 1;
+        int pageSize = queryDto.getPageSize() != null ? queryDto.getPageSize() : 10;
+        int offset = (pageNum - 1) * pageSize;
+
+        List<Product> records = productMapper.selectPage(offset, pageSize,
+                queryDto.getCategory(), queryDto.getKeyword(),
+                queryDto.getMinStock(), queryDto.getMaxStock(), queryDto.getStatus());
+        int total = productMapper.selectCount(
+                queryDto.getCategory(), queryDto.getKeyword(),
+                queryDto.getMinStock(), queryDto.getMaxStock(), queryDto.getStatus());
+
+        List<ProductVo> voList = records.stream().map(this::convertToVo).collect(Collectors.toList());
+        return new PageResult<>(voList, total, pageNum, pageSize);
+    }
+
+    @Override
     public void addProduct(ProductDto dto) {
         if (checkProductCodeExists(dto.getProductCode(), null)) {
-            throw new BusinessException(400, "Product code already exists");
+            throw new BusinessException(400, "货品编码已存在");
         }
-
         Product product = new Product();
-        BeanUtils.copyProperties(dto, product);
+        product.setProductCode(dto.getProductCode());
+        product.setProductName(dto.getProductName());
+        product.setCategory(dto.getCategory());
+        product.setCurrentStock(dto.getCurrentStock() != null ? dto.getCurrentStock() : 0);
+        product.setReferenceCost(dto.getReferenceCost());
+        product.setReferencePrice(dto.getReferencePrice());
+        product.setAlertMin(dto.getAlertMin());
+        product.setAlertMax(dto.getAlertMax());
+        product.setStatus(dto.getStatus() != null ? dto.getStatus() : 1);
         productMapper.insert(product);
     }
 
     @Override
-    @CacheEvict(value = "product", allEntries = true)
     public void updateProduct(ProductDto dto) {
-        if (checkProductCodeExists(dto.getProductCode(), dto.getId())) {
-            throw new BusinessException(400, "Product code already exists");
-        }
-
         Product product = productMapper.selectById(dto.getId());
         if (product == null) {
             throw new BusinessException(404, "Product not found");
         }
-
-        BeanUtils.copyProperties(dto, product);
-        productMapper.updateById(product);
+        if (!product.getProductCode().equals(dto.getProductCode()) && checkProductCodeExists(dto.getProductCode(), null)) {
+            throw new BusinessException(400, "货品编码已存在");
+        }
+        product.setProductName(dto.getProductName());
+        product.setCategory(dto.getCategory());
+        product.setReferenceCost(dto.getReferenceCost());
+        product.setReferencePrice(dto.getReferencePrice());
+        product.setAlertMin(dto.getAlertMin());
+        product.setAlertMax(dto.getAlertMax());
+        productMapper.update(product);
     }
 
     @Override
-    @CacheEvict(value = "product", allEntries = true)
     public void deleteProduct(Long id) {
-        productMapper.deleteById(id);
+        productMapper.softDeleteById(id);
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void adjustStock(StockAdjustDto dto) {
         Product product = productMapper.selectForUpdate(dto.getProductId());
         if (product == null) {
             throw new BusinessException(404, "Product not found");
         }
+        int currentStock = product.getCurrentStock() != null ? product.getCurrentStock() : 0;
+        int quantity = dto.getQuantity() != null ? dto.getQuantity() : 1;
+        String adjustType = dto.getAdjustType();
 
-        int quantityBefore = product.getCurrentStock() != null ? product.getCurrentStock() : 0;
-        int quantityChange = dto.getQuantity();
-        int quantityAfter;
-
-        if ("IN".equals(dto.getAdjustType())) {
-            quantityAfter = quantityBefore + quantityChange;
-        } else if ("OUT".equals(dto.getAdjustType())) {
-            if (quantityBefore < quantityChange) {
-                throw new BusinessException(400, "Insufficient stock");
+        if ("IN".equals(adjustType)) {
+            productMapper.adjustStockById(dto.getProductId(), quantity);
+        } else if ("OUT".equals(adjustType)) {
+            if (currentStock < quantity) {
+                throw new BusinessException(400, "库存不足");
             }
-            quantityAfter = quantityBefore - quantityChange;
+            productMapper.adjustStockById(dto.getProductId(), -quantity);
         } else {
-            throw new BusinessException(400, "Invalid adjust type");
+            throw new BusinessException(400, "Invalid adjustType");
         }
 
-        LambdaQueryWrapper<Product> updateWrapper = new LambdaQueryWrapper<>();
-        updateWrapper.eq(Product::getId, product.getId())
-                .eq(Product::getVersion, product.getVersion());
-        product.setCurrentStock(quantityAfter);
-        product.setVersion(product.getVersion() + 1);
-        int updated = productMapper.update(product, updateWrapper);
-        if (updated == 0) {
-            throw new BusinessException(400, "Stock adjustment failed, please retry");
-        }
+        int newStock = "IN".equals(adjustType) ? currentStock + quantity : currentStock - quantity;
+        productMapper.updateVersionById(dto.getProductId(), product.getVersion(), newStock);
 
-        StockLog stockLog = new StockLog();
-        stockLog.setProductId(product.getId());
-        stockLog.setOperationType(dto.getAdjustType());
-        stockLog.setQuantityBefore(quantityBefore);
-        stockLog.setQuantityChange(quantityChange);
-        stockLog.setQuantityAfter(quantityAfter);
-        stockLog.setRemark(dto.getRemark());
-        stockLogMapper.insert(stockLog);
+        // stock log
+        com.wms.entity.StockLog log = new com.wms.entity.StockLog();
+        log.setProductId(dto.getProductId());
+        log.setProductCode(product.getProductCode());
+        log.setProductName(product.getProductName());
+        log.setStockType(adjustType);
+        log.setQuantity(quantity);
+        log.setBeforeStock(currentStock);
+        log.setAfterStock(newStock);
+        log.setCreateTime(LocalDateTime.now());
+        stockLogMapper.insert(log);
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void batchAdjustStock(BatchStockAdjustDto dto) {
         for (BatchStockAdjustDto.BatchAdjustItem item : dto.getItems()) {
             StockAdjustDto singleDto = new StockAdjustDto();
@@ -140,22 +139,26 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
 
     @Override
     public boolean checkProductCodeExists(String productCode, Long excludeId) {
-        LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Product::getProductCode, productCode);
+        List<Product> products = productMapper.selectList(productCode);
         if (excludeId != null) {
-            wrapper.ne(Product::getId, excludeId);
+            products.removeIf(p -> excludeId.equals(p.getId()));
         }
-        return productMapper.selectCount(wrapper) > 0;
+        return !products.isEmpty();
     }
 
-    @Cacheable(value = "product", key = "#id")
-    public Product getProductById(Long id) {
-        return productMapper.selectById(id);
-    }
-
-    private ProductVo convertToVo(Product product) {
+    private ProductVo convertToVo(Product p) {
         ProductVo vo = new ProductVo();
-        BeanUtils.copyProperties(product, vo);
+        vo.setId(p.getId());
+        vo.setProductCode(p.getProductCode());
+        vo.setProductName(p.getProductName());
+        vo.setCategory(p.getCategory());
+        vo.setCurrentStock(p.getCurrentStock());
+        vo.setReferenceCost(p.getReferenceCost());
+        vo.setReferencePrice(p.getReferencePrice());
+        vo.setAlertMin(p.getAlertMin());
+        vo.setAlertMax(p.getAlertMax());
+        vo.setStatus(p.getStatus());
+        vo.setCreateTime(p.getCreateTime());
         return vo;
     }
 }

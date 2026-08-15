@@ -11,4 +11,6 @@ public class TodaySummaryVo {
     private Integer totalStock;
     private java.math.BigDecimal inboundAmount;
     private java.math.BigDecimal outboundAmount;
+    private Integer pendingInbound;
+    private Integer pendingOutbound;
 }

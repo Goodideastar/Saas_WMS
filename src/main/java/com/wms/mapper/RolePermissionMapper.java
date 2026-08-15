@@ -1,9 +1,12 @@
 package com.wms.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.wms.entity.RolePermission;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 @Mapper
-public interface RolePermissionMapper extends BaseMapper<RolePermission> {
+public interface RolePermissionMapper {
+    List<RolePermission> selectByRoleIds(@Param("roleIds") List<Long> roleIds);
 }

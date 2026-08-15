@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wms.mapper.StockAlertMapper">
+
+    <resultMap id="BaseResultMap" type="com.wms.entity.StockAlert">
+        <id column="id" property="id"/>
+        <result column="product_id" property="productId"/>
+        <result column="product_code" property="productCode"/>
+        <result column="product_name" property="productName"/>
+        <result column="alert_type" property="alertType"/>
+        <result column="alert_content" property="alertContent"/>
+        <result column="status" property="status"/>
+        <result column="alert_time" property="alertTime"/>
+        <result column="handle_time" property="handleTime"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="create_by" property="createBy"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="is_deleted" property="isDeleted"/>
+        <result column="version" property="version"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, product_id, product_code, product_name, alert_type, alert_content, status,
+        alert_time, handle_time, create_time, update_time, create_by, update_by, is_deleted, version
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM stock_alert WHERE id = #{id} AND is_deleted = 0
+    </select>
+
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM stock_alert
+        <where>
+            is_deleted = 0
+            <if test="status != null and status != ''">AND status = #{status}</if>
+            <if test="startTime != null">AND alert_time &gt;= #{startTime}</if>
+            <if test="endTime != null">AND alert_time &lt;= #{endTime}</if>
+        </where>
+        ORDER BY alert_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="selectCount" resultType="int">
+        SELECT COUNT(*) FROM stock_alert
+        <where>
+            is_deleted = 0
+            <if test="status != null and status != ''">AND status = #{status}</if>
+            <if test="startTime != null">AND alert_time &gt;= #{startTime}</if>
+            <if test="endTime != null">AND alert_time &lt;= #{endTime}</if>
+        </where>
+    </select>
+
+    <select id="countByProduct" resultType="int">
+        SELECT COUNT(*) FROM stock_alert WHERE product_id = #{productId} AND is_deleted = 0
+    </select>
+
+    <select id="countByStatus" resultType="int">
+        SELECT COUNT(*) FROM stock_alert WHERE status = #{status} AND is_deleted = 0
+    </select>
+
+    <select id="countToday" resultType="int">
+        SELECT COUNT(*) FROM stock_alert WHERE DATE(alert_time) = CURDATE() AND is_deleted = 0
+    </select>
+
+    <insert id="insert" parameterType="com.wms.entity.StockAlert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO stock_alert (product_id, product_code, product_name, alert_type, alert_content,
+                                 status, alert_time, create_time, update_time, create_by, is_deleted, version)
+        VALUES (#{productId}, #{productCode}, #{productName}, #{alertType}, #{alertContent},
+                #{status}, #{alertTime}, #{createTime}, #{updateTime}, #{createBy}, 0, 0)
+    </insert>
+
+    <update id="update" parameterType="com.wms.entity.StockAlert">
+        UPDATE stock_alert
+        <set>
+            <if test="status != null">status = #{status},</if>
+            <if test="handleTime != null">handle_time = #{handleTime},</if>
+            update_time = #{updateTime},
+            update_by = #{updateBy},
+            version = version + 1
+        </set>
+        WHERE id = #{id} AND is_deleted = 0
+    </update>
+
+    <update id="softDeleteById">
+        UPDATE stock_alert SET is_deleted = 1, update_time = NOW() WHERE id = #{id}
+    </update>
+
+</mapper>

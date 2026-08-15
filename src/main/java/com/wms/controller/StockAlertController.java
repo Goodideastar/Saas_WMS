@@ -1,9 +1,9 @@
 package com.wms.controller;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.wms.common.Result;
 import com.wms.dto.StockAlertHandleDto;
 import com.wms.dto.StockAlertQueryDto;
+import com.wms.dto.PageResult;
 import com.wms.service.StockAlertService;
 import com.wms.vo.StockAlertVo;
 import jakarta.validation.Valid;
@@ -30,8 +30,8 @@ public class StockAlertController {
 
     @GetMapping("/page")
     @PreAuthorize("hasAuthority('alert:query')")
-    public Result<IPage<StockAlertVo>> pageQuery(@Validated StockAlertQueryDto queryDto) {
-        IPage<StockAlertVo> page = stockAlertService.pageQuery(queryDto);
+    public Result<PageResult<StockAlertVo>> pageQuery(@Validated StockAlertQueryDto queryDto) {
+        PageResult<StockAlertVo> page = stockAlertService.pageQuery(queryDto);
         return Result.success(page);
     }
 

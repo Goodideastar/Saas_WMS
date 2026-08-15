@@ -1,6 +1,6 @@
 package com.wms.service;
 
-import com.wms.vo.*;
+import com.wms.vo.TodaySummaryVo;
 
 import java.util.List;
 import java.util.Map;

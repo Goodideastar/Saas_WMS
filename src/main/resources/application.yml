@@ -41,19 +41,14 @@ spring:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
 
-mybatis-plus:
-  mapper-locations: classpath*:/mapper/**/*.xml
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
   type-aliases-package: com.wms.entity
   configuration:
     map-underscore-to-camel-case: true
+    default-fetch-size: 100
+    default-statement-timeout: 30
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-  global-config:
-    db-config:
-      id-type: assign_id
-      logic-delete-field: isDeleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
-    banner: false
 
 wms:
   jwt:

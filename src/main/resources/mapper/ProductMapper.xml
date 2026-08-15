@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wms.mapper.ProductMapper">
+
+    <resultMap id="BaseResultMap" type="com.wms.entity.Product">
+        <id column="id" property="id"/>
+        <result column="product_code" property="productCode"/>
+        <result column="product_name" property="productName"/>
+        <result column="category" property="category"/>
+        <result column="current_stock" property="currentStock"/>
+        <result column="reference_cost" property="referenceCost"/>
+        <result column="reference_price" property="referencePrice"/>
+        <result column="alert_min" property="alertMin"/>
+        <result column="alert_max" property="alertMax"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="create_by" property="createBy"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="is_deleted" property="isDeleted"/>
+        <result column="version" property="version"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, product_code, product_name, category, current_stock, reference_cost, reference_price,
+        alert_min, alert_max, status, create_time, update_time, create_by, update_by, is_deleted, version
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM product WHERE id = #{id} AND is_deleted = 0
+    </select>
+
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM product
+        <where>
+            is_deleted = 0
+            <if test="category != null and category != ''">AND category = #{category}</if>
+            <if test="keyword != null and keyword != ''">
+                AND (product_code LIKE CONCAT('%', #{keyword}, '%') OR product_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="minStock != null">AND current_stock &gt;= #{minStock}</if>
+            <if test="maxStock != null">AND current_stock &lt;= #{maxStock}</if>
+            <if test="status != null">AND status = #{status}</if>
+        </where>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="selectCount" resultType="int">
+        SELECT COUNT(*) FROM product
+        <where>
+            is_deleted = 0
+            <if test="category != null and category != ''">AND category = #{category}</if>
+            <if test="keyword != null and keyword != ''">
+                AND (product_code LIKE CONCAT('%', #{keyword}, '%') OR product_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="minStock != null">AND current_stock &gt;= #{minStock}</if>
+            <if test="maxStock != null">AND current_stock &lt;= #{maxStock}</if>
+            <if test="status != null">AND status = #{status}</if>
+        </where>
+    </select>
+
+    <insert id="insert" parameterType="com.wms.entity.Product" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO product (product_code, product_name, category, current_stock, reference_cost, reference_price,
+                             alert_min, alert_max, status, create_time, update_time, create_by, is_deleted, version)
+        VALUES (#{productCode}, #{productName}, #{category}, #{currentStock}, #{referenceCost}, #{referencePrice},
+                #{alertMin}, #{alertMax}, #{status}, #{createTime}, #{updateTime}, #{createBy}, 0, 0)
+    </insert>
+
+    <update id="update" parameterType="com.wms.entity.Product">
+        UPDATE product
+        <set>
+            <if test="productName != null">product_name = #{productName},</if>
+            <if test="category != null">category = #{category},</if>
+            <if test="referenceCost != null">reference_cost = #{referenceCost},</if>
+            <if test="referencePrice != null">reference_price = #{referencePrice},</if>
+            <if test="alertMin != null">alert_min = #{alertMin},</if>
+            <if test="alertMax != null">alert_max = #{alertMax},</if>
+            update_time = #{updateTime},
+            update_by = #{updateBy},
+            version = version + 1
+        </set>
+        WHERE id = #{id} AND is_deleted = 0
+    </update>
+
+    <update id="softDeleteById">
+        UPDATE product SET is_deleted = 1, update_time = NOW() WHERE id = #{id}
+    </update>
+
+    <update id="updateStatusById">
+        UPDATE product SET status = #{status}, update_time = NOW() WHERE id = #{id}
+    </update>
+
+    <select id="selectList" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM product WHERE product_code = #{productCode} AND is_deleted = 0
+    </select>
+
+    <update id="adjustStockById">
+        UPDATE product SET current_stock = current_stock + #{quantity}, update_time = NOW() WHERE id = #{id}
+    </update>
+
+    <update id="updateVersionById">
+        UPDATE product SET current_stock = #{currentStock}, update_time = NOW(), version = version + 1
+        WHERE id = #{id} AND is_deleted = 0 AND version = #{version}
+    </update>
+
+    <select id="countLowStock" resultType="int">
+        SELECT COUNT(*) FROM product WHERE current_stock &lt; alert_min AND is_deleted = 0
+    </select>
+
+</mapper>

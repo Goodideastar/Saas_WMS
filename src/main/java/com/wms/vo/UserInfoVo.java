@@ -1,10 +1,12 @@
 package com.wms.vo;
 
+import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
 
 @Data
+@Builder
 public class UserInfoVo {
 
     private Long id;
@@ -14,6 +16,8 @@ public class UserInfoVo {
     private String email;
 
     private String phone;
+
+    private Integer status;
 
     private List<String> roles;
 
