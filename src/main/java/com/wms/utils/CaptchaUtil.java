@@ -1,5 +1,7 @@
 package com.wms.utils;
 
+import com.wms.exception.BusinessException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -12,8 +14,10 @@ import java.io.ByteArrayOutputStream;
 import java.util.Base64;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Component
+@RequiredArgsConstructor
 public class CaptchaUtil {
 
     private static final int WIDTH = 120;
@@ -21,33 +25,42 @@ public class CaptchaUtil {
     private static final int CODE_COUNT = 4;
     private static final String CHARACTERS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
     private static final long CAPTCHA_EXPIRE_MINUTES = 3;
+    private static final String CAPTCHA_KEY_PREFIX = "captcha:";
 
+    public static final int CODE_EXPIRED = 4001;
+    public static final int CODE_MISMATCH = 4002;
+
+    private final StringRedisTemplate redisTemplate;
     private final Random random = new Random();
 
-    public CaptchaResult generate(StringRedisTemplate redisTemplate) {
+    public CaptchaResult generate() {
         String code = generateCode();
         String key = UUID.randomUUID().toString().replace("-", "");
 
         BufferedImage image = drawImage(code);
         String base64Image = toBase64(image);
 
-        redisTemplate.opsForValue().set("captcha:" + key, code, CAPTCHA_EXPIRE_MINUTES, java.util.concurrent.TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(CAPTCHA_KEY_PREFIX + key, code,
+                CAPTCHA_EXPIRE_MINUTES, TimeUnit.MINUTES);
 
         return new CaptchaResult(key, base64Image);
     }
 
-    public void verify(StringRedisTemplate redisTemplate, String key, String code) {
-        if (key == null || code == null) {
-            throw new IllegalArgumentException("Captcha key or code is null");
+    public void verify(String key, String code) {
+        if (key == null || key.isBlank() || code == null || code.isBlank()) {
+            throw new BusinessException(CODE_MISMATCH, "请输入验证码");
         }
-        Object cached = redisTemplate.opsForValue().get("captcha:" + key);
+        // 先取后删：验证码单次使用，无论对错都作废，防止同一 key 暴力枚举
+        Object cached = redisTemplate.opsForValue().get(CAPTCHA_KEY_PREFIX + key);
+        if (cached != null) {
+            redisTemplate.delete(CAPTCHA_KEY_PREFIX + key);
+        }
         if (cached == null) {
-            throw new IllegalArgumentException("Captcha expired");
+            throw new BusinessException(CODE_EXPIRED, "验证码已过期，请重新获取");
         }
-        if (!cached.toString().equalsIgnoreCase(code)) {
-            throw new IllegalArgumentException("Captcha code is incorrect");
+        if (!cached.toString().equalsIgnoreCase(code.trim())) {
+            throw new BusinessException(CODE_MISMATCH, "验证码错误");
         }
-        redisTemplate.delete("captcha:" + key);
     }
 
     private String generateCode() {
@@ -66,7 +79,7 @@ public class CaptchaUtil {
         g2d.setColor(new Color(240, 245, 250));
         g2d.fillRect(0, 0, WIDTH, HEIGHT);
 
-        // Noise lines
+        // 噪点
         for (int i = 0; i < 60; i++) {
             int x1 = random.nextInt(WIDTH);
             int y1 = random.nextInt(HEIGHT);
@@ -95,7 +108,7 @@ public class CaptchaUtil {
             g2d.setTransform(new AffineTransform());
         }
 
-        // Curved干扰线
+        // 曲线干扰
         for (int i = 0; i < 3; i++) {
             g2d.setColor(new Color(random.nextInt(150), random.nextInt(150), random.nextInt(150)));
             g2d.setStroke(new BasicStroke(1.5f));

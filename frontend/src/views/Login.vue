@@ -5,18 +5,39 @@
     <div class="bg-grid"></div>
 
     <div class="login-wrapper">
+      <!-- HUD 四角框 -->
+      <span class="corner corner-tl"></span>
+      <span class="corner corner-tr"></span>
+      <span class="corner corner-bl"></span>
+      <span class="corner corner-br"></span>
+
       <!-- Left: Brand + Tech Visual -->
       <div class="login-brand">
-        <div class="brand-bg-icon">
-          <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="10" y="30" width="100" height="70" rx="2" stroke="rgba(6,182,212,0.12)" stroke-width="1"/>
-            <line x1="10" y1="50" x2="110" y2="50" stroke="rgba(6,182,212,0.08)" stroke-width="1"/>
-            <line x1="10" y1="70" x2="110" y2="70" stroke="rgba(6,182,212,0.08)" stroke-width="1"/>
-            <line x1="40" y1="30" x2="40" y2="100" stroke="rgba(6,182,212,0.08)" stroke-width="1"/>
-            <line x1="70" y1="30" x2="70" y2="100" stroke="rgba(6,182,212,0.08)" stroke-width="1"/>
-            <rect x="18" y="36" width="14" height="10" rx="1" stroke="rgba(6,182,212,0.15)" stroke-width="1"/>
-            <rect x="48" y="56" width="14" height="10" rx="1" stroke="rgba(6,182,212,0.15)" stroke-width="1"/>
-            <rect x="78" y="76" width="14" height="10" rx="1" stroke="rgba(6,182,212,0.15)" stroke-width="1"/>
+        <div class="brand-bg-rack">
+          <!-- 立体货架线稿 -->
+          <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g stroke="rgba(6,182,212,0.14)" stroke-width="1.2">
+              <!-- 立柱 -->
+              <path d="M40 60 L40 170 M160 60 L160 170 M70 45 L70 155 M130 45 L130 155"/>
+              <!-- 横梁（三层） -->
+              <path d="M40 85 L160 85 M40 125 L160 125 M40 165 L160 165"/>
+              <path d="M70 75 L130 75 M70 115 L130 115 M70 155 L130 155"/>
+              <!-- 斜撑 -->
+              <path d="M40 85 L70 75 M70 75 L40 125 M40 125 L70 115 M160 85 L130 75 M130 75 L160 125 M160 125 L130 115"/>
+            </g>
+            <g stroke="rgba(6,182,212,0.30)" stroke-width="1.2">
+              <!-- 托盘货箱 -->
+              <rect x="48" y="92" width="18" height="12" rx="1"/>
+              <rect x="86" y="52" width="18" height="12" rx="1"/>
+              <rect x="86" y="92" width="18" height="12" rx="1"/>
+              <rect x="124" y="92" width="18" height="12" rx="1"/>
+              <rect x="86" y="132" width="18" height="12" rx="1"/>
+              <rect x="48" y="132" width="18" height="12" rx="1"/>
+            </g>
+            <!-- 扫描光带 -->
+            <rect x="36" y="0" width="128" height="3" fill="rgba(6,182,212,0.35)">
+              <animate attributeName="y" values="55;160;55" dur="6s" repeatCount="indefinite"/>
+            </rect>
           </svg>
         </div>
 
@@ -32,6 +53,18 @@
         <h1 class="brand-title">WMS</h1>
         <p class="brand-sub">智能仓储管理系统</p>
 
+        <div class="brand-metrics">
+          <div class="metric">
+            <span class="metric-label">ZONE</span>
+            <span class="metric-value">A-07</span>
+          </div>
+          <div class="metric-sep"></div>
+          <div class="metric">
+            <span class="metric-label">LINK</span>
+            <span class="metric-value ok">STABLE</span>
+          </div>
+        </div>
+
         <div class="brand-status">
           <span class="status-dot"></span>
           <span>SYS ONLINE</span>
@@ -42,8 +75,8 @@
       <div class="login-card">
         <div class="card-top-accent"></div>
         <div class="card-header">
-          <h2>登录</h2>
-          <p>输入您的账号以继续</p>
+          <h2>身份验证</h2>
+          <p>ACCESS CONTROL · 输入凭据接入仓储网络</p>
         </div>
 
         <div v-if="isExpired" class="expired-banner">
@@ -59,6 +92,7 @@
               :prefix-icon="User"
               size="large"
               class="tech-input"
+              autocomplete="username"
             />
           </el-form-item>
           <el-form-item prop="password">
@@ -70,14 +104,37 @@
               size="large"
               show-password
               class="tech-input"
+              autocomplete="current-password"
             />
+          </el-form-item>
+          <el-form-item prop="captchaCode">
+            <div class="captcha-row">
+              <el-input
+                v-model="loginForm.captchaCode"
+                placeholder="验证码"
+                :prefix-icon="Key"
+                size="large"
+                maxlength="4"
+                class="captcha-input tech-input"
+                autocomplete="off"
+              />
+              <div
+                class="captcha-img"
+                :class="{ 'is-loading': captchaLoading }"
+                title="点击刷新验证码"
+                @click="loadCaptcha"
+              >
+                <img v-if="captchaImage && !captchaLoading" :src="captchaImage" alt="验证码" />
+                <el-icon v-else class="captcha-refresh-icon"><RefreshRight /></el-icon>
+              </div>
+            </div>
           </el-form-item>
           <el-form-item>
             <el-checkbox v-model="loginForm.remember">记住我</el-checkbox>
           </el-form-item>
           <el-form-item>
             <button type="submit" class="login-btn" @click.prevent="handleLogin" :disabled="loading">
-              <span v-if="!loading" class="btn-text">登 录</span>
+              <span v-if="!loading" class="btn-text">接 入 系 统</span>
               <span v-else class="btn-loading">
                 <span class="dot"></span><span class="dot"></span><span class="dot"></span>
               </span>
@@ -87,7 +144,7 @@
       </div>
     </div>
 
-    <p class="login-footer">WMS v1.0 · Secure Connection</p>
+    <p class="login-footer">WMS v1.0 · SECURE CHANNEL · TLS ENCRYPTED</p>
   </div>
 </template>
 
@@ -95,8 +152,9 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/user'
+import { getCaptcha } from '@/api/auth'
 import { ElMessage } from 'element-plus'
-import { User, Lock, WarningFilled } from '@element-plus/icons-vue'
+import { User, Lock, Key, RefreshRight, WarningFilled } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -129,7 +187,10 @@ async function loadCaptcha() {
     const res = await getCaptcha()
     const data = res.data
     loginForm.captchaKey = data.key
+    loginForm.captchaCode = ''
     captchaImage.value = 'data:image/png;base64,' + data.image
+  } catch {
+    ElMessage.error('验证码加载失败，点击图片重试')
   } finally {
     captchaLoading.value = false
   }
@@ -151,9 +212,8 @@ async function handleLogin() {
     const redirect = route.query.redirect || '/'
     router.push(redirect)
   } catch (error) {
-    if (error?.code === 4001 || error?.code === 4002) {
-      loadCaptcha()
-    }
+    // 验证码单次有效：任何登录失败后都刷新，避免下次提交撞 4001
+    loadCaptcha()
     ElMessage.error(error?.msg || '登录失败，请检查用户名、密码和验证码')
   } finally {
     loading.value = false
@@ -168,9 +228,8 @@ const PARTICLE_COUNT = 30
 function initCanvas() {
   const canvas = canvasRef.value
   if (!canvas) return
-  const brand = canvas.parentElement
-  canvas.width = brand.offsetWidth
-  canvas.height = brand.offsetHeight
+  canvas.width = window.innerWidth
+  canvas.height = window.innerHeight
 
   for (let i = 0; i < PARTICLE_COUNT; i++) {
     particles.push({
@@ -204,17 +263,16 @@ function drawParticles() {
     ctx.fill()
   }
 
-  // Draw faint connection lines between close particles
   for (let i = 0; i < particles.length; i++) {
     for (let j = i + 1; j < particles.length; j++) {
       const dx = particles[i].x - particles[j].x
       const dy = particles[i].y - particles[j].y
       const dist = Math.sqrt(dx * dx + dy * dy)
-      if (dist < 80) {
+      if (dist < 90) {
         ctx.beginPath()
         ctx.moveTo(particles[i].x, particles[i].y)
         ctx.lineTo(particles[j].x, particles[j].y)
-        ctx.strokeStyle = `rgba(6, 182, 212, ${0.06 * (1 - dist / 80)})`
+        ctx.strokeStyle = `rgba(6, 182, 212, ${0.06 * (1 - dist / 90)})`
         ctx.lineWidth = 0.5
         ctx.stroke()
       }
@@ -224,9 +282,11 @@ function drawParticles() {
   animId = requestAnimationFrame(drawParticles)
 }
 
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
 onMounted(() => {
   initCanvas()
-  drawParticles()
+  if (!prefersReducedMotion) drawParticles()
   loadCaptcha()
 })
 
@@ -242,23 +302,22 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #0a0f1e;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(6, 182, 212, 0.06), transparent),
+    #0a0f1e;
   position: relative;
   overflow: hidden;
 }
 
-/* Particle canvas behind everything in the left panel area */
 .particle-canvas {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
   z-index: 0;
 }
 
-/* Subtle grid overlay */
 .bg-grid {
   position: absolute;
   inset: 0;
@@ -266,11 +325,11 @@ onUnmounted(() => {
     linear-gradient(rgba(6, 182, 212, 0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(6, 182, 212, 0.03) 1px, transparent 1px);
   background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 30%, transparent 100%);
   pointer-events: none;
   z-index: 0;
 }
 
-/* Horizontal scan line */
 .scan-line {
   position: absolute;
   top: 0;
@@ -293,7 +352,6 @@ onUnmounted(() => {
 .login-wrapper {
   display: flex;
   align-items: stretch;
-  gap: 0;
   border-radius: var(--radius-xl);
   overflow: hidden;
   box-shadow:
@@ -303,6 +361,19 @@ onUnmounted(() => {
   position: relative;
   z-index: 1;
 }
+
+/* ── HUD 四角框 ── */
+.corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  z-index: 2;
+  pointer-events: none;
+}
+.corner-tl { top: -1px; left: -1px; border-top: 2px solid rgba(6, 182, 212, 0.7); border-left: 2px solid rgba(6, 182, 212, 0.7); }
+.corner-tr { top: -1px; right: -1px; border-top: 2px solid rgba(6, 182, 212, 0.7); border-right: 2px solid rgba(6, 182, 212, 0.7); }
+.corner-bl { bottom: -1px; left: -1px; border-bottom: 2px solid rgba(6, 182, 212, 0.7); border-left: 2px solid rgba(6, 182, 212, 0.7); }
+.corner-br { bottom: -1px; right: -1px; border-bottom: 2px solid rgba(6, 182, 212, 0.7); border-right: 2px solid rgba(6, 182, 212, 0.7); }
 
 /* ── Left Brand Panel ── */
 .login-brand {
@@ -320,14 +391,14 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.brand-bg-icon {
+.brand-bg-rack {
   position: absolute;
-  bottom: 20px;
-  right: -10px;
-  width: 140px;
-  height: 140px;
-  opacity: 0.5;
-  color: #06b6d4;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 200px;
+  opacity: 0.6;
   pointer-events: none;
 }
 
@@ -364,6 +435,49 @@ onUnmounted(() => {
   color: rgba(148, 163, 184, 0.7);
   letter-spacing: 0.1em;
   margin: 0;
+}
+
+/* ── 状态读数 ── */
+.brand-metrics {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 8px 14px;
+  border: 1px solid rgba(6, 182, 212, 0.15);
+  border-radius: 4px;
+  background: rgba(6, 182, 212, 0.04);
+  font-family: monospace;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.metric-label {
+  font-size: 9px;
+  color: rgba(148, 163, 184, 0.5);
+  letter-spacing: 0.15em;
+}
+
+.metric-value {
+  font-size: 11px;
+  color: rgba(6, 182, 212, 0.85);
+  letter-spacing: 0.08em;
+}
+
+.metric-value.ok {
+  color: #34d399;
+  text-shadow: 0 0 6px rgba(52, 211, 153, 0.4);
+}
+
+.metric-sep {
+  width: 1px;
+  height: 22px;
+  background: rgba(6, 182, 212, 0.2);
 }
 
 .brand-status {
@@ -438,12 +552,14 @@ onUnmounted(() => {
 }
 
 .card-header p {
-  font-size: var(--font-sm);
-  color: rgba(148, 163, 184, 0.7);
+  font-size: var(--font-xs);
+  color: rgba(148, 163, 184, 0.55);
   margin: 0;
+  letter-spacing: 0.06em;
+  font-family: monospace;
 }
 
-/* Tech-styled input wrapper */
+/* Tech-styled input */
 .tech-input :deep(.el-input__wrapper) {
   background: rgba(15, 23, 42, 0.8);
   border-color: rgba(6, 182, 212, 0.15);
@@ -500,7 +616,6 @@ onUnmounted(() => {
   opacity: 0.8;
 }
 
-/* Button shine sweep */
 .login-btn::after {
   content: '';
   position: absolute;
@@ -555,7 +670,7 @@ onUnmounted(() => {
   border-color: #fff;
 }
 
-/* Captcha row */
+/* ── Captcha row ── */
 .captcha-row {
   display: flex;
   gap: 12px;
@@ -567,23 +682,6 @@ onUnmounted(() => {
   flex: 1;
 }
 
-.captcha-input :deep(.el-input__wrapper) {
-  background: rgba(15, 23, 42, 0.8);
-  border-color: rgba(6, 182, 212, 0.15);
-  box-shadow: none !important;
-  border-radius: 6px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.captcha-input :deep(.el-input__wrapper.is-focus) {
-  border-color: rgba(6, 182, 212, 0.6);
-  box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.15) !important;
-}
-
-.captcha-input :deep(.el-input__inner) {
-  color: #e2e8f0;
-}
-
 .captcha-img {
   width: 110px;
   height: 40px;
@@ -591,12 +689,15 @@ onUnmounted(() => {
   overflow: hidden;
   cursor: pointer;
   border: 1px solid rgba(6, 182, 212, 0.2);
+  background: rgba(15, 23, 42, 0.8);
   flex-shrink: 0;
   transition: border-color 0.2s, box-shadow 0.2s;
-  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.captcha-img:hover:not(.is-loading) {
+.captcha-img:hover {
   border-color: rgba(6, 182, 212, 0.5);
   box-shadow: 0 0 8px rgba(6, 182, 212, 0.2);
 }
@@ -609,13 +710,18 @@ onUnmounted(() => {
 }
 
 .captcha-refresh-icon {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   color: rgba(6, 182, 212, 0.5);
   font-size: 20px;
+  animation: spin 1s linear infinite;
+}
+
+.captcha-img.is-loading .captcha-refresh-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Login footer */
@@ -626,5 +732,45 @@ onUnmounted(() => {
   color: rgba(100, 116, 139, 0.4);
   letter-spacing: 0.04em;
   z-index: 1;
+  font-family: monospace;
+}
+
+/* ── 响应式 ── */
+@media (max-width: 720px) {
+  .login-wrapper {
+    flex-direction: column;
+    width: calc(100vw - 32px);
+    max-width: 400px;
+  }
+
+  .login-brand {
+    width: 100%;
+    padding: 32px 24px 44px;
+    border-right: none;
+    border-bottom: 1px solid rgba(6, 182, 212, 0.12);
+  }
+
+  .brand-bg-rack {
+    display: none;
+  }
+
+  .login-card {
+    width: 100%;
+    padding: 32px 24px 32px;
+  }
+
+  .brand-status {
+    bottom: 12px;
+  }
+}
+
+/* ── 减少动态 ── */
+@media (prefers-reduced-motion: reduce) {
+  .scan-line,
+  .brand-icon,
+  .status-dot,
+  .captcha-refresh-icon {
+    animation: none !important;
+  }
 }
 </style>

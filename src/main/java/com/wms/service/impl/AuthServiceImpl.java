@@ -2,6 +2,7 @@ package com.wms.service.impl;
 
 import com.wms.dto.LoginDto;
 import com.wms.dto.RegisterDto;
+import com.wms.exception.BusinessException;
 import com.wms.mapper.UserMapper;
 import com.wms.security.UserDetailsImpl;
 import com.wms.service.AuthService;
@@ -38,14 +39,14 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginVo login(LoginDto loginDto) {
-        captchaUtil.verify(redisTemplate, loginDto.getCaptchaKey(), loginDto.getCaptchaCode());
+        captchaUtil.verify(loginDto.getCaptchaKey(), loginDto.getCaptchaCode());
 
         var user = userMapper.selectByUsername(loginDto.getUsername());
         if (user == null || !passwordEncoder.matches(loginDto.getPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("Invalid username or password");
+            throw new BusinessException(4003, "用户名或密码错误");
         }
         if (user.getStatus() != 1) {
-            throw new IllegalArgumentException("Account is disabled");
+            throw new BusinessException(4004, "账号已被禁用");
         }
 
         UserDetailsImpl userDetails = new UserDetailsImpl(

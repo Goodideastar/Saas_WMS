@@ -42,7 +42,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<Result<Void>> handleBusinessException(BusinessException e) {
         log.error("业务异常: {}", e.getMessage());
-        HttpStatus status = e.getCode() == 404 ? HttpStatus.NOT_FOUND
+        // 自定义业务码（如 4001 验证码过期、4002 验证码错误）以 HTTP 200 返回，
+        // 由前端根据 Result.code 处理，避免落入 axios 的 HTTP 错误分支丢失 code
+        HttpStatus status = e.getCode() >= 4000 ? HttpStatus.OK
+                : e.getCode() == 404 ? HttpStatus.NOT_FOUND
                 : e.getCode() == 400 ? HttpStatus.BAD_REQUEST
                 : e.getCode() == 401 ? HttpStatus.UNAUTHORIZED
                 : e.getCode() == 403 ? HttpStatus.FORBIDDEN

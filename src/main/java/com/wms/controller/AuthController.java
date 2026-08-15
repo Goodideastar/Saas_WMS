@@ -26,7 +26,7 @@ public class AuthController {
 
     @GetMapping("/captcha")
     public Result<CaptchaUtil.CaptchaResult> getCaptcha() {
-        return Result.success(captchaUtil.generate(null));
+        return Result.success(captchaUtil.generate());
     }
 
     @PostMapping("/login")

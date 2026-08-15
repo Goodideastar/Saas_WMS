@@ -33,10 +33,15 @@ service.interceptors.response.use(
         return Promise.reject(new Error('登录已过期'))
       } else if (res.code === 403) {
         ElMessage.error('权限不足，无法执行此操作')
-      } else {
+      } else if (!(res.code >= 4001 && res.code <= 4004)) {
+        // 4001-4004 为登录流程业务码（验证码/凭据错误），由调用方统一提示
         ElMessage.error(res.message || '请求失败')
       }
-      return Promise.reject(new Error(res.message || '请求失败'))
+      // reject 的错误附带 code/msg，供调用方按业务码分支处理
+      return Promise.reject(Object.assign(new Error(res.message || '请求失败'), {
+        code: res.code,
+        msg: res.message
+      }))
     }
     return res
   },
