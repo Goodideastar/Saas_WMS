@@ -3,41 +3,12 @@
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
     <mirrors>
+        <!-- 阿里云公共仓库（聚合 central + jcenter），所有仓库请求都走这里 -->
         <mirror>
-            <id>aliyun-maven</id>
-            <mirrorOf>central</mirrorOf>
-            <name>Aliyun Maven Mirror</name>
+            <id>aliyun-public</id>
+            <mirrorOf>*</mirrorOf>
+            <name>Aliyun Public Repository</name>
             <url>https://maven.aliyun.com/repository/public</url>
         </mirror>
-        <mirror>
-            <id>aliyun-spring</id>
-            <mirrorOf>*</mirrorOf>
-            <name>Aliyun Spring Mirror</name>
-            <url>https://maven.aliyun.com/repository/spring</url>
-        </mirror>
     </mirrors>
-    <profiles>
-        <profile>
-            <id>aliyun</id>
-            <repositories>
-                <repository>
-                    <id>aliyun-maven</id>
-                    <url>https://maven.aliyun.com/repository/public</url>
-                    <releases><enabled>true</enabled></releases>
-                    <snapshots><enabled>false</enabled></snapshots>
-                </repository>
-            </repositories>
-            <pluginRepositories>
-                <pluginRepository>
-                    <id>aliyun-maven</id>
-                    <url>https://maven.aliyun.com/repository/public</url>
-                    <releases><enabled>true</enabled></releases>
-                    <snapshots><enabled>false</enabled></snapshots>
-                </pluginRepository>
-            </pluginRepositories>
-        </profile>
-    </profiles>
-    <activeProfiles>
-        <activeProfile>aliyun</activeProfile>
-    </activeProfiles>
 </settings>

@@ -5,7 +5,8 @@ WORKDIR /app
 
 # 安装所有依赖（包括 devDependencies，因为 vite 是开发依赖）
 COPY package.json package-lock.json* ./
-RUN npm ci && npm cache clean --force
+# 使用国内 npm 镜像加速
+RUN npm config set registry https://registry.npmmirror.com && npm ci && npm cache clean --force
 
 # 复制源代码
 COPY . .
@@ -17,8 +18,8 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 # 构建生产版本
 RUN npm run build
 
-# 阶段 2: 运行阶段
-FROM nginx:latest
+# 阶段 2: 运行阶段（alpine 自带 busybox wget，供健康检查使用）
+FROM nginx:1.27-alpine
 WORKDIR /app
 
 # 添加标签

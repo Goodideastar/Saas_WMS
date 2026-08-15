@@ -25,7 +25,8 @@ services:
       - wms-network
 
   redis:
-    ports: []
+    # 生产环境不对宿主机暴露 Redis 端口（!override 才能真正清空基础文件的映射）
+    ports: !override []
     command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     deploy:
       resources:

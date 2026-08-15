@@ -41,8 +41,9 @@ RUN addgroup -g 1000 -S appgroup \
 # 复制 jar 文件
 COPY --from=builder /app/target/*.jar app.jar
 
-# 修改文件所有权
-RUN chown -R appuser:appgroup /app
+# 创建日志目录（OOM 时 heapdump 写入）
+RUN mkdir -p /app/logs \
+    && chown -R appuser:appgroup /app
 
 # 切换到非 root 用户
 USER appuser
