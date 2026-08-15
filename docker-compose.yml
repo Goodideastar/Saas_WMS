@@ -57,7 +57,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        MAVEN_OPTS: "-Xmx512m"
+        MAVEN_OPTS: "-Xmx1g"
     container_name: wms-backend
     restart: always
     ports:
@@ -133,21 +133,40 @@ services:
     build: ./ai-gateway
     container_name: wms-ai-gateway
     ports:
-      - "8090:8090"
+      - "${AI_GATEWAY_PORT:-8090}:8090"
     environment:
-      - LLM_PROVIDER=qwen
-      - LLM_API_KEY=${LLM_API_KEY}
-      - LLM_BASE_URL=https://maas-api.cn-huabei-1.xf-yun.com/v2
-      - LLM_MODEL=xopqwen36v35b
-      - WMS_BASE_URL=http://backend:8080
-      - REDIS_URL=redis://redis:6379/0
-      - AI_GATEWAY_PORT=8090
+      TZ: Asia/Shanghai
+      LLM_PROVIDER: ${LLM_PROVIDER:-qwen}
+      LLM_API_KEY: ${LLM_API_KEY:?LLM_API_KEY is required (cp .env.example .env)}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://maas-api.cn-huabei-1.xf-yun.com/v2}
+      LLM_MODEL: ${LLM_MODEL:-xopqwen36v35b}
+      WMS_BASE_URL: http://backend:8080
+      REDIS_URL: redis://redis:6379/0
+      AI_GATEWAY_PORT: 8090
     depends_on:
-      - backend
-      - redis
-    restart: unless-stopped
+      backend:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    restart: always
     networks:
       - wms-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
 
 volumes:
   mysql_data:

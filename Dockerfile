@@ -4,17 +4,21 @@ FROM maven:3.9-eclipse-temurin-21 AS builder
 WORKDIR /app
 
 # 优化 Docker 缓存层
+# go-offline 连同构建期插件一起预下载（dependency:resolve 只下依赖 jar，
+# package 阶段的 jar/surefire/spring-boot 插件仍需现下，网络抖动会导致失败）
 COPY pom.xml .
 COPY settings.xml .
-RUN rm -rf /root/.m2/repository/org/apache/poi && mvn dependency:resolve -B -s settings.xml
+RUN rm -rf /root/.m2/repository/org/apache/poi \
+    && mvn dependency:go-offline -B -s settings.xml \
+    || mvn dependency:go-offline -B -s settings.xml
 
 # 复制源代码
 COPY src ./src
 
-# 设置 JVM 参数并打包
-ARG MAVEN_OPTS="-Xmx512m"
+# 设置 JVM 参数并打包（-ntp 仅隐藏下载进度条，出错时保留完整日志）
+ARG MAVEN_OPTS="-Xmx768m"
 ENV MAVEN_OPTS=$MAVEN_OPTS
-RUN mvn package -DskipTests -B -q -s settings.xml
+RUN mvn package -Dmaven.test.skip=true -B -ntp -s settings.xml
 
 # 阶段 2: 运行阶段
 FROM eclipse-temurin:21-jre-alpine
