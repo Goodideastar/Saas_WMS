@@ -14,7 +14,7 @@ COPY src ./src
 # 设置 JVM 参数并打包
 ARG MAVEN_OPTS="-Xmx512m"
 ENV MAVEN_OPTS=$MAVEN_OPTS
-RUN mvn package -DskipTests -B -q
+RUN mvn package -DskipTests -B -q -s settings.xml
 
 # 阶段 2: 运行阶段
 FROM eclipse-temurin:21-jre-alpine
