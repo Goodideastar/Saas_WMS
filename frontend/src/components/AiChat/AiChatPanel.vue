@@ -6,12 +6,7 @@
     </div>
     <div class="ai-panel-messages" ref="msgContainer">
       <div v-for="(msg, i) in messages" :key="i" :class="['msg', msg.role]">
-        <div class="msg-content">{{ msg.content }}</div>
-        <div v-if="msg.toolCalls && msg.toolCalls.length" class="tool-calls">
-          <div v-for="tc in msg.toolCalls" :key="tc.tool" class="tool-chip">
-            {{ tc.status === 'running' ? '...' : 'OK' }} {{ tc.tool }}
-          </div>
-        </div>
+        <div class="msg-content" v-html="formatContent(msg.content)"></div>
         <!-- 图表渲染 -->
         <div v-if="msg.chartData" class="chart-container">
           <div v-if="msg.chartData.trend" ref="trendChartRef" class="chart-body"></div>
@@ -168,6 +163,54 @@ const scrollToBottom = () => {
     if (el) el.scrollTop = el.scrollHeight
   })
 }
+
+const formatContent = (content) => {
+  if (!content) return ''
+  const lines = content.split('\n')
+  let html = ''
+  let inTable = false
+  let tableRows = []
+
+  const flushTable = () => {
+    if (tableRows.length > 0) {
+      const thead = tableRows[0]
+      const tbody = tableRows.slice(1)
+      html += '<table class="stock-table"><thead><tr>'
+      thead.forEach(cell => { html += `<th>${cell.trim()}</th>` })
+      html += '</tr></thead><tbody>'
+      tbody.forEach(row => {
+        html += '<tr>'
+        row.forEach(cell => { html += `<td>${cell.trim()}</td>` })
+        html += '</tr>'
+      })
+      html += '</tbody></table>'
+      tableRows = []
+    }
+    inTable = false
+  }
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      if (!inTable) inTable = true
+      const cells = trimmed.split('|').slice(1, -1)
+      if (cells.every(c => /^[-| ]+$/.test(c))) {
+        continue
+      }
+      tableRows.push(cells)
+    } else {
+      flushTable()
+      if (trimmed) {
+        let text = trimmed
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/`(.+?)`/g, '<code>$1</code>')
+        html += `<p>${text}</p>`
+      }
+    }
+  }
+  flushTable()
+  return html
+}
 </script>
 
 <style scoped>
@@ -190,8 +233,15 @@ const scrollToBottom = () => {
 .msg.user { text-align: right; }
 .msg.user .msg-content { background: #409eff; color: #fff; display: inline-block; padding: 8px 12px; border-radius: 8px; max-width: 80%; }
 .msg.assistant .msg-content { background: #f0f2f5; padding: 8px 12px; border-radius: 8px; }
-.tool-calls { margin-top: 4px; }
-.tool-chip { display: inline-block; padding: 2px 8px; margin: 2px; background: #e6f7ff; border-radius: 4px; font-size: 12px; }
+.msg.assistant .msg-content p { margin: 4px 0; line-height: 1.6; font-size: 14px; }
+.msg.assistant .msg-content strong { color: #409eff; }
+.msg.assistant .msg-content code { background: #e6f7ff; padding: 1px 4px; border-radius: 3px; font-size: 13px; color: #c45600; }
+.stock-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px; }
+.stock-table th { background: #409eff; color: #fff; padding: 8px 10px; text-align: left; font-weight: 600; white-space: nowrap; }
+.stock-table td { padding: 7px 10px; border-bottom: 1px solid #ebeef5; color: #333; }
+.stock-table tbody tr:hover { background: #f5f7fa; }
+.stock-table tbody tr:nth-child(even) { background: #fafafa; }
+.stock-table tbody tr:nth-child(even):hover { background: #f5f7fa; }
 .chart-container { margin-top: 12px; }
 .chart-body { height: 200px; width: 100%; margin-bottom: 12px; }
 </style>
