@@ -5,9 +5,8 @@ WORKDIR /app
 
 # 优化 Docker 缓存层
 COPY pom.xml .
-# 使用阿里云 Maven 镜像
-COPY settings.xml /usr/share/maven/ref/
-RUN mvn dependency:go-offline -B
+COPY settings.xml .
+RUN mvn dependency:go-offline -B -s settings.xml
 
 # 复制源代码
 COPY src ./src
