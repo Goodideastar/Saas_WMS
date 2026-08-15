@@ -6,7 +6,7 @@ WORKDIR /app
 # 优化 Docker 缓存层
 COPY pom.xml .
 COPY settings.xml .
-RUN mvn dependency:resolve -B -s settings.xml
+RUN rm -rf /root/.m2/repository/org/apache/poi && mvn dependency:resolve -B -s settings.xml
 
 # 复制源代码
 COPY src ./src
