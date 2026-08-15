@@ -18,8 +18,8 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 # 构建生产版本
 RUN npm run build
 
-# 阶段 2: 运行阶段（alpine 自带 busybox wget，供健康检查使用）
-FROM nginx:1.27-alpine
+# 阶段 2: 运行阶段（latest 基于 Debian，无 wget，健康检查用 bash /dev/tcp）
+FROM nginx:latest
 WORKDIR /app
 
 # 添加标签
@@ -43,9 +43,9 @@ RUN chown -R nginx:nginx /usr/share/nginx/html \
     && chown -R nginx:nginx /var/log/nginx \
     && chown -R nginx:nginx /etc/nginx/conf.d
 
-# 健康检查
+# 健康检查（Debian 版镜像无 wget/curl，用 bash 内置 /dev/tcp 探测）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
+  CMD bash -c 'exec 3<>/dev/tcp/127.0.0.1/80' || exit 1
 
 EXPOSE 80
 
