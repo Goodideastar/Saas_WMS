@@ -58,10 +58,11 @@ wms:
 
 logging:
   level:
-    com.wms: debug
-    org.springframework.security: debug
+    com.wms: info
+    com.wms.mapper: debug
+    org.springframework.security: info
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
 management:
   endpoints:
