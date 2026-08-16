@@ -18,8 +18,10 @@ class Settings(BaseSettings):
         if not v or not str(v).strip():
             return "https://maas-api.cn-huabei-1.xf-yun.com/v2"
         url = str(v).strip()
+        if url.startswith("//"):
+            url = "https:" + url
         if not url.startswith("http://") and not url.startswith("https://"):
-            raise ValueError(f"LLM_BASE_URL must start with http:// or https://, got: {url}")
+            url = "https://" + url
         return url
 
     @field_validator("llm_api_key", mode="before")
