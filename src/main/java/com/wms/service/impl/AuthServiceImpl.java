@@ -1,9 +1,18 @@
 package com.wms.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wms.dto.LoginDto;
 import com.wms.dto.RegisterDto;
+import com.wms.entity.Permission;
+import com.wms.entity.Role;
+import com.wms.entity.RolePermission;
+import com.wms.entity.UserRole;
 import com.wms.exception.BusinessException;
+import com.wms.mapper.PermissionMapper;
+import com.wms.mapper.RoleMapper;
+import com.wms.mapper.RolePermissionMapper;
 import com.wms.mapper.UserMapper;
+import com.wms.mapper.UserRoleMapper;
 import com.wms.security.UserDetailsImpl;
 import com.wms.service.AuthService;
 import com.wms.utils.CaptchaUtil;
@@ -15,8 +24,11 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -26,15 +38,54 @@ public class AuthServiceImpl implements AuthService {
     private final StringRedisTemplate redisTemplate;
     private final CaptchaUtil captchaUtil;
     private final UserMapper userMapper;
+    private final UserRoleMapper userRoleMapper;
+    private final RoleMapper roleMapper;
+    private final RolePermissionMapper rolePermissionMapper;
+    private final PermissionMapper permissionMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AuthServiceImpl(PasswordEncoder passwordEncoder, JwtUtils jwtUtils,
                            StringRedisTemplate redisTemplate, CaptchaUtil captchaUtil,
-                           UserMapper userMapper) {
+                           UserMapper userMapper, UserRoleMapper userRoleMapper,
+                           RoleMapper roleMapper, RolePermissionMapper rolePermissionMapper,
+                           PermissionMapper permissionMapper) {
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
         this.redisTemplate = redisTemplate;
         this.captchaUtil = captchaUtil;
         this.userMapper = userMapper;
+        this.userRoleMapper = userRoleMapper;
+        this.roleMapper = roleMapper;
+        this.rolePermissionMapper = rolePermissionMapper;
+        this.permissionMapper = permissionMapper;
+    }
+
+    private List<Role> loadEnabledRoles(Long userId) {
+        List<Long> roleIds = userRoleMapper.selectByUserId(userId).stream()
+                .map(UserRole::getRoleId).collect(Collectors.toList());
+        if (roleIds.isEmpty()) {
+            return List.of();
+        }
+        return roleMapper.selectByIds(roleIds).stream()
+                .filter(r -> r.getStatus() != null && r.getStatus() == 1)
+                .collect(Collectors.toList());
+    }
+
+    private List<String> loadPermissionCodes(Long userId) {
+        List<Role> roles = loadEnabledRoles(userId);
+        if (roles.isEmpty()) {
+            return List.of();
+        }
+        List<Long> roleIdList = roles.stream().map(Role::getId).collect(Collectors.toList());
+        Set<Long> permissionIds = rolePermissionMapper.selectByRoleIds(roleIdList).stream()
+                .map(RolePermission::getPermissionId).collect(Collectors.toSet());
+        if (permissionIds.isEmpty()) {
+            return List.of();
+        }
+        return permissionMapper.selectByIds(new ArrayList<>(permissionIds)).stream()
+                .filter(p -> p.getStatus() != null && p.getStatus() == 1)
+                .map(Permission::getPermissionCode)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -55,7 +106,12 @@ public class AuthServiceImpl implements AuthService {
                 List.of(new SimpleGrantedAuthority("ROLE_USER")));
         String token = jwtUtils.generateToken(user.getUsername(), user.getId());
         redisTemplate.opsForValue().set("user:token:" + token, String.valueOf(user.getId()), 2, TimeUnit.HOURS);
-        redisTemplate.opsForValue().set("user:perm:" + user.getId(), "[]", 2, TimeUnit.HOURS);
+        try {
+            redisTemplate.opsForValue().set("user:perm:" + user.getId(),
+                    objectMapper.writeValueAsString(loadPermissionCodes(user.getId())), 2, TimeUnit.HOURS);
+        } catch (Exception e) {
+            redisTemplate.opsForValue().set("user:perm:" + user.getId(), "[]", 2, TimeUnit.HOURS);
+        }
 
         LoginVo loginVo = new LoginVo();
         loginVo.setAccessToken(token);
@@ -87,14 +143,17 @@ public class AuthServiceImpl implements AuthService {
     public UserInfoVo getUserInfo(Long userId) {
         var user = userMapper.selectById(userId);
         if (user == null) throw new RuntimeException("User not found");
+        List<String> roleCodes = loadEnabledRoles(userId).stream()
+                .map(Role::getRoleCode)
+                .collect(Collectors.toList());
         return UserInfoVo.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .phone(user.getPhone())
                 .status(user.getStatus())
-                .roles(List.of())
-                .permissions(List.of())
+                .roles(roleCodes)
+                .permissions(loadPermissionCodes(userId))
                 .build();
     }
 }

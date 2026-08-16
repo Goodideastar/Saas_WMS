@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wms.mapper.DashboardMapper">
+
+    <select id="todayInboundStats" resultType="java.util.HashMap">
+        SELECT COUNT(*)                              AS orderCount,
+               COALESCE(SUM(total_amount), 0)        AS totalAmount
+        FROM inbound_order
+        WHERE is_deleted = 0
+          AND create_time >= CURDATE()
+    </select>
+
+    <select id="todayOutboundStats" resultType="java.util.HashMap">
+        SELECT COUNT(*)                              AS orderCount,
+               COALESCE(SUM(total_amount), 0)        AS totalAmount
+        FROM outbound_order
+        WHERE is_deleted = 0
+          AND create_time >= CURDATE()
+    </select>
+
+    <select id="totalStock" resultType="java.lang.Long">
+        SELECT COALESCE(SUM(current_stock), 0)
+        FROM product
+        WHERE is_deleted = 0
+    </select>
+
+    <select id="last7DaysTrend" resultType="java.util.HashMap">
+        SELECT DATE_FORMAT(create_time, '%Y-%m-%d')                                       AS statDate,
+               COALESCE(SUM(CASE WHEN stock_type = 'IN'  THEN quantity ELSE 0 END), 0)    AS inboundQuantity,
+               COALESCE(SUM(CASE WHEN stock_type = 'OUT' THEN quantity ELSE 0 END), 0)    AS outboundQuantity
+        FROM stock_log
+        WHERE is_deleted = 0
+          AND create_time >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+        GROUP BY DATE_FORMAT(create_time, '%Y-%m-%d')
+    </select>
+
+    <select id="alertStats" resultType="java.util.HashMap">
+        SELECT COALESCE(SUM(CASE WHEN status = 'UNHANDLED' THEN 1 ELSE 0 END), 0)                          AS unhandled,
+               COALESCE(SUM(CASE WHEN status = 'UNHANDLED' AND alert_type = 'BELOW_MIN' THEN 1 ELSE 0 END), 0) AS belowMin,
+               COALESCE(SUM(CASE WHEN status = 'UNHANDLED' AND alert_type = 'ABOVE_MAX' THEN 1 ELSE 0 END), 0) AS aboveMax
+        FROM stock_alert
+        WHERE is_deleted = 0
+    </select>
+
+    <select id="topOutboundProducts" resultType="java.util.HashMap">
+        SELECT product_name                        AS productName,
+               COALESCE(SUM(quantity), 0)          AS outboundQuantity
+        FROM stock_log
+        WHERE is_deleted = 0
+          AND stock_type = 'OUT'
+        GROUP BY product_id, product_name
+        ORDER BY outboundQuantity DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="warehouseDistribution" resultType="java.util.HashMap">
+        SELECT w.warehouse_name                                              AS warehouseName,
+               COALESCE(SUM(i.actual_quantity), 0)                           AS stockQuantity
+        FROM warehouse w
+                 LEFT JOIN inbound_order o
+                           ON o.warehouse_id = w.id AND o.is_deleted = 0 AND o.status = 'COMPLETED'
+                 LEFT JOIN inbound_order_item i
+                           ON i.order_id = o.id AND i.is_deleted = 0
+        WHERE w.is_deleted = 0
+        GROUP BY w.id, w.warehouse_name
+        ORDER BY stockQuantity DESC
+    </select>
+
+</mapper>

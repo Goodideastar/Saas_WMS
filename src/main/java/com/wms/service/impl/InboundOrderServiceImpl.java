@@ -9,6 +9,7 @@ import com.wms.entity.InboundOrderItem;
 import com.wms.exception.BusinessException;
 import com.wms.mapper.InboundOrderMapper;
 import com.wms.mapper.ProductMapper;
+import com.wms.mapper.WarehouseMapper;
 import com.wms.service.InboundOrderService;
 import com.wms.vo.InboundOrderVo;
 import org.springframework.stereotype.Service;
@@ -26,12 +27,15 @@ public class InboundOrderServiceImpl implements InboundOrderService {
 
     private final InboundOrderMapper inboundOrderMapper;
     private final ProductMapper productMapper;
+    private final WarehouseMapper warehouseMapper;
     private final com.wms.mapper.StockLogMapper stockLogMapper;
 
     public InboundOrderServiceImpl(InboundOrderMapper inboundOrderMapper, ProductMapper productMapper,
+                                   WarehouseMapper warehouseMapper,
                                    com.wms.mapper.StockLogMapper stockLogMapper) {
         this.inboundOrderMapper = inboundOrderMapper;
         this.productMapper = productMapper;
+        this.warehouseMapper = warehouseMapper;
         this.stockLogMapper = stockLogMapper;
     }
 
@@ -60,6 +64,13 @@ public class InboundOrderServiceImpl implements InboundOrderService {
                 InboundOrderItem item = new InboundOrderItem();
                 item.setOrderId(order.getId());
                 item.setProductId(itemDto.getProductId());
+                if (itemDto.getProductId() != null) {
+                    var product = productMapper.selectById(itemDto.getProductId());
+                    if (product != null) {
+                        item.setProductCode(product.getProductCode());
+                        item.setProductName(product.getProductName());
+                    }
+                }
                 item.setExpectedQuantity(itemDto.getExpectedQuantity());
                 item.setActualQuantity(itemDto.getActualQuantity() != null ? itemDto.getActualQuantity() : 0);
                 item.setUnitPrice(itemDto.getUnitPrice() != null ? itemDto.getUnitPrice() : BigDecimal.ZERO);
@@ -142,6 +153,15 @@ public class InboundOrderServiceImpl implements InboundOrderService {
         return new PageResult<>(voList, total, pageNum, pageSize);
     }
 
+    @Override
+    public InboundOrderVo getById(Long id) {
+        InboundOrder order = inboundOrderMapper.selectById(id);
+        if (order == null) {
+            throw new BusinessException(404, "入库单不存在");
+        }
+        return convertToVo(order);
+    }
+
     private int getProductStock(Long productId) {
         if (productId == null) return 0;
         var product = productMapper.selectById(productId);
@@ -168,6 +188,10 @@ public class InboundOrderServiceImpl implements InboundOrderService {
         vo.setId(order.getId());
         vo.setOrderNo(order.getOrderNo());
         vo.setWarehouseId(order.getWarehouseId());
+        if (order.getWarehouseId() != null) {
+            var warehouse = warehouseMapper.selectById(order.getWarehouseId());
+            vo.setWarehouseName(warehouse != null ? warehouse.getWarehouseName() : null);
+        }
         vo.setInboundType(order.getInboundType());
         vo.setSupplier(order.getSupplier());
         vo.setRelatedOrderNo(order.getRelatedOrderNo());
@@ -175,6 +199,8 @@ public class InboundOrderServiceImpl implements InboundOrderService {
         vo.setTotalAmount(order.getTotalAmount());
         vo.setRemark(order.getRemark());
         vo.setCreateTime(order.getCreateTime());
+        vo.setCreateBy(order.getCreateBy());
+        vo.setInboundTime(order.getInboundTime());
         List<InboundOrderItem> items = inboundOrderMapper.selectItemsByOrderId(order.getId());
         List<InboundOrderVo.InboundOrderItemVo> itemVos = items.stream().map(item -> {
             InboundOrderVo.InboundOrderItemVo iv = new InboundOrderVo.InboundOrderItemVo();

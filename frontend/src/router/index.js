@@ -46,6 +46,12 @@ const asyncRoutes = [
         meta: { title: '货品管理', icon: 'Box', permission: 'product:list' }
       },
       {
+        path: 'warehouse/list',
+        name: 'WarehouseList',
+        component: () => import('@/views/warehouse/WarehouseList.vue'),
+        meta: { title: '仓库管理', icon: 'OfficeBuilding', permission: 'warehouse:list' }
+      },
+      {
         path: 'inbound/list',
         name: 'InboundList',
         component: () => import('@/views/inbound/InboundList.vue'),

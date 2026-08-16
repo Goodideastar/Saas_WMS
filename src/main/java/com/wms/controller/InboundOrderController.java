@@ -51,6 +51,6 @@ public class InboundOrderController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('inbound:query')")
     public Result<InboundOrderVo> getById(@PathVariable Long id) {
-        return Result.success();
+        return Result.success(inboundOrderService.getById(id));
     }
 }

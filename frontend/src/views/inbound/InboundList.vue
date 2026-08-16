@@ -29,7 +29,9 @@
         <el-table-column type="selection" width="55" />
         <el-table-column prop="orderNo" label="订单号" />
         <el-table-column prop="supplier" label="供应商" />
-        <el-table-column prop="inboundType" label="入库类型" />
+        <el-table-column label="入库类型">
+          <template #default="{ row }">{{ getInboundTypeText(row.inboundType) }}</template>
+        </el-table-column>
         <el-table-column label="状态">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
@@ -66,7 +68,7 @@
           <el-col :span="12">
             <el-form-item label="仓库">
               <el-select v-model="orderForm.warehouseId" placeholder="请选择">
-                <el-option label="主仓库" :value="1" />
+                <el-option v-for="w in warehouseList" :key="w.id" :label="w.warehouseName" :value="w.id" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -139,7 +141,7 @@
         <el-descriptions-item label="订单号">{{ detailData.orderNo }}</el-descriptions-item>
         <el-descriptions-item label="状态"><el-tag :type="getStatusType(detailData.status)">{{ getStatusText(detailData.status) }}</el-tag></el-descriptions-item>
         <el-descriptions-item label="仓库">{{ detailData.warehouseName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="入库类型">{{ detailData.inboundType }}</el-descriptions-item>
+        <el-descriptions-item label="入库类型">{{ getInboundTypeText(detailData.inboundType) }}</el-descriptions-item>
         <el-descriptions-item label="供应商">{{ detailData.supplier || '-' }}</el-descriptions-item>
         <el-descriptions-item label="关联订单">{{ detailData.relatedOrderNo || '-' }}</el-descriptions-item>
         <el-descriptions-item label="创建人">{{ detailData.createBy || '-' }}</el-descriptions-item>
@@ -168,6 +170,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { getInboundPage, createInbound, auditInbound, cancelInbound, getInboundDetail } from '@/api/inbound.js'
 import { getProductPage } from '@/api/product.js'
+import { getWarehouseList } from '@/api/warehouse.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const loading = ref(false)
@@ -177,6 +180,7 @@ const detailVisible = ref(false)
 const detailLoading = ref(false)
 const detailData = ref({})
 const productList = ref([])
+const warehouseList = ref([])
 const pagination = reactive({ pageNum: 1, pageSize: 10, total: 0 })
 const queryForm = reactive({ orderNo: '', status: '', dateRange: null })
 const orderForm = reactive({ warehouseId: null, supplier: '', inboundType: '', relatedOrderNo: '', remark: '', items: [] })
@@ -188,6 +192,11 @@ function getStatusText(s) { return statusMap[s]?.text || s }
 async function loadProducts() {
   const res = await getProductPage({ pageNum: 1, pageSize: 200, status: 1 })
   productList.value = res.data.records || []
+}
+
+async function loadWarehouses() {
+  const res = await getWarehouseList()
+  warehouseList.value = res.data || []
 }
 
 async function loadData() {
@@ -203,7 +212,7 @@ async function loadData() {
 
 function handleSearch() { pagination.pageNum = 1; loadData() }
 function handleReset() { Object.assign(queryForm, { orderNo: '', status: '', dateRange: null }); handleSearch() }
-function handleCreate() { Object.assign(orderForm, { warehouseId: 1, supplier: '', inboundType: '', relatedOrderNo: '', remark: '', items: [{ productId: null, expectedQuantity: 1, actualQuantity: 0, unitPrice: 0 }] }); loadProducts(); dialogVisible.value = true }
+function handleCreate() { Object.assign(orderForm, { warehouseId: warehouseList.value.length ? warehouseList.value[0].id : null, supplier: '', inboundType: '', relatedOrderNo: '', remark: '', items: [{ productId: null, expectedQuantity: 1, actualQuantity: 0, unitPrice: 0 }] }); loadProducts(); dialogVisible.value = true }
 
 async function handleSubmit() {
   await createInbound(orderForm)
@@ -237,7 +246,10 @@ async function loadDetail(id) {
   } finally { detailLoading.value = false }
 }
 
-onMounted(() => loadData())
+const inboundTypeMap = { PURCHASE: '采购入库', RETURN: '退货入库', INVENTORY: '盘盈入库' }
+function getInboundTypeText(type) { return inboundTypeMap[type] || type || '-' }
+
+onMounted(() => { loadData(); loadWarehouses() })
 </script>
 
 <style scoped>

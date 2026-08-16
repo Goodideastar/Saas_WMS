@@ -7,7 +7,11 @@
         <id column="id" property="id"/>
         <result column="product_code" property="productCode"/>
         <result column="product_name" property="productName"/>
+        <result column="specification" property="specification"/>
+        <result column="unit" property="unit"/>
         <result column="category" property="category"/>
+        <result column="image_url" property="imageUrl"/>
+        <result column="remark" property="remark"/>
         <result column="current_stock" property="currentStock"/>
         <result column="reference_cost" property="referenceCost"/>
         <result column="reference_price" property="referencePrice"/>
@@ -23,7 +27,8 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, product_code, product_name, category, current_stock, reference_cost, reference_price,
+        id, product_code, product_name, specification, unit, category, image_url, remark,
+        current_stock, reference_cost, reference_price,
         alert_min, alert_max, status, create_time, update_time, create_by, update_by, is_deleted, version
     </sql>
 
@@ -64,9 +69,11 @@
     </select>
 
     <insert id="insert" parameterType="com.wms.entity.Product" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO product (product_code, product_name, category, current_stock, reference_cost, reference_price,
+        INSERT INTO product (product_code, product_name, specification, unit, category, image_url, remark,
+                             current_stock, reference_cost, reference_price,
                              alert_min, alert_max, status, create_time, update_time, create_by, is_deleted, version)
-        VALUES (#{productCode}, #{productName}, #{category}, #{currentStock}, #{referenceCost}, #{referencePrice},
+        VALUES (#{productCode}, #{productName}, #{specification}, #{unit}, #{category}, #{imageUrl}, #{remark},
+                #{currentStock}, #{referenceCost}, #{referencePrice},
                 #{alertMin}, #{alertMax}, #{status}, #{createTime}, #{updateTime}, #{createBy}, 0, 0)
     </insert>
 
@@ -74,7 +81,11 @@
         UPDATE product
         <set>
             <if test="productName != null">product_name = #{productName},</if>
+            <if test="specification != null">specification = #{specification},</if>
+            <if test="unit != null">unit = #{unit},</if>
             <if test="category != null">category = #{category},</if>
+            <if test="imageUrl != null">image_url = #{imageUrl},</if>
+            <if test="remark != null">remark = #{remark},</if>
             <if test="referenceCost != null">reference_cost = #{referenceCost},</if>
             <if test="referencePrice != null">reference_price = #{referencePrice},</if>
             <if test="alertMin != null">alert_min = #{alertMin},</if>

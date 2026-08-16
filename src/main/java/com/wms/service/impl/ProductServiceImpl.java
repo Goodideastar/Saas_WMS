@@ -55,7 +55,11 @@ public class ProductServiceImpl implements ProductService {
         Product product = new Product();
         product.setProductCode(dto.getProductCode());
         product.setProductName(dto.getProductName());
+        product.setSpecification(dto.getSpecification());
+        product.setUnit(dto.getUnit());
         product.setCategory(dto.getCategory());
+        product.setImageUrl(dto.getImageUrl());
+        product.setRemark(dto.getRemark());
         product.setCurrentStock(dto.getCurrentStock() != null ? dto.getCurrentStock() : 0);
         product.setReferenceCost(dto.getReferenceCost());
         product.setReferencePrice(dto.getReferencePrice());
@@ -75,7 +79,11 @@ public class ProductServiceImpl implements ProductService {
             throw new BusinessException(400, "货品编码已存在");
         }
         product.setProductName(dto.getProductName());
+        product.setSpecification(dto.getSpecification());
+        product.setUnit(dto.getUnit());
         product.setCategory(dto.getCategory());
+        product.setImageUrl(dto.getImageUrl());
+        product.setRemark(dto.getRemark());
         product.setReferenceCost(dto.getReferenceCost());
         product.setReferencePrice(dto.getReferencePrice());
         product.setAlertMin(dto.getAlertMin());
@@ -151,7 +159,11 @@ public class ProductServiceImpl implements ProductService {
         vo.setId(p.getId());
         vo.setProductCode(p.getProductCode());
         vo.setProductName(p.getProductName());
+        vo.setSpecification(p.getSpecification());
+        vo.setUnit(p.getUnit());
         vo.setCategory(p.getCategory());
+        vo.setImageUrl(p.getImageUrl());
+        vo.setRemark(p.getRemark());
         vo.setCurrentStock(p.getCurrentStock());
         vo.setReferenceCost(p.getReferenceCost());
         vo.setReferencePrice(p.getReferencePrice());

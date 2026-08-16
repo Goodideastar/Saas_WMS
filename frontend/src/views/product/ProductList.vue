@@ -28,7 +28,7 @@
         <el-button v-permission="'product:adjust'" @click="handleBatchAdjust">批量调整库存</el-button>
       </div>
 
-      <el-table v-loading="loading" :data="tableData" border stripe style="width: 100%" @selection-change="val => selectedRows.value = val">
+      <el-table v-loading="loading" :data="tableData" border stripe style="width: 100%" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="productCode" label="货品编码" />
         <el-table-column prop="productName" label="货品名称" />
@@ -167,11 +167,12 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { getProductPage, addProduct, updateProduct, deleteProduct, adjustStock } from '@/api/product.js'
+import { getProductPage, addProduct, updateProduct, deleteProduct, adjustStock, batchAdjustStock } from '@/api/product.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const loading = ref(false)
 const tableData = ref([])
+const selectedRows = ref([])
 const dialogVisible = ref(false)
 const stockDialogVisible = ref(false)
 const batchDialogVisible = ref(false)
@@ -181,6 +182,7 @@ const pagination = reactive({ pageNum: 1, pageSize: 10, total: 0 })
 const queryForm = reactive({ productCode: '', productName: '', category: '', status: null })
 const formData = reactive({ id: null, productCode: '', productName: '', specification: '', unit: '', category: '', referenceCost: 0, referencePrice: 0, currentStock: 0, alertMin: 0, alertMax: 99999, status: 1, remark: '' })
 const stockForm = reactive({ productId: null, productName: '', currentStock: 0, quantity: 0, remark: '' })
+const batchForm = reactive({ items: [], adjustType: 'IN', remark: '' })
 
 const rules = {
   productCode: [{ required: true, message: '请输入货品编码', trigger: 'blur' }],
@@ -251,10 +253,13 @@ async function submitAdjustStock() {
   loadData()
 }
 
+function handleSelectionChange(val) {
+  selectedRows.value = val
+}
+
 function handleBatchAdjust() {
-  const selected = tableData.value.filter(r => selectedRows.value.includes(r))
-  if (selected.length === 0) { ElMessage.warning('请先勾选要调整的货品'); return }
-  batchForm.items = selected.map(r => ({ productId: r.id, productName: r.productName, currentStock: r.currentStock, quantity: 0 }))
+  if (selectedRows.value.length === 0) { ElMessage.warning('请先勾选要调整的货品'); return }
+  batchForm.items = selectedRows.value.map(r => ({ productId: r.id, productName: r.productName, currentStock: r.currentStock, quantity: 0 }))
   batchForm.adjustType = 'IN'
   batchForm.remark = ''
   batchDialogVisible.value = true

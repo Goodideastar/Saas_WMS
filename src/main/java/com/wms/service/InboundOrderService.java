@@ -10,4 +10,5 @@ public interface InboundOrderService {
     void auditInboundOrder(Long id);
     void cancelInboundOrder(Long id);
     PageResult<InboundOrderVo> pageQuery(InboundOrderQueryDto queryDto);
+    InboundOrderVo getById(Long id);
 }

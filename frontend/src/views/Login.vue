@@ -93,6 +93,8 @@
               size="large"
               class="tech-input"
               autocomplete="username"
+              @focus="showFieldError('username')"
+              @blur="hideFieldError('username')"
             />
           </el-form-item>
           <el-form-item prop="password">
@@ -105,6 +107,8 @@
               show-password
               class="tech-input"
               autocomplete="current-password"
+              @focus="showFieldError('password')"
+              @blur="hideFieldError('password')"
             />
           </el-form-item>
           <el-form-item prop="captchaCode">
@@ -117,6 +121,8 @@
                 maxlength="4"
                 class="captcha-input tech-input"
                 autocomplete="off"
+                @focus="showFieldError('captchaCode')"
+                @blur="hideFieldError('captchaCode')"
               />
               <div
                 class="captcha-img"
@@ -176,9 +182,18 @@ const captchaImage = ref('')
 const captchaLoading = ref(false)
 
 const rules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
-  captchaCode: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
+  username: [{ required: true, message: '请输入用户名', trigger: 'change' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'change' }],
+  captchaCode: [{ required: true, message: '请输入验证码', trigger: 'change' }]
+}
+
+// 聚焦时显示该项校验提示，失焦时隐藏
+function showFieldError(prop) {
+  formRef.value?.validateField(prop).catch(() => {})
+}
+
+function hideFieldError(prop) {
+  formRef.value?.clearValidate(prop)
 }
 
 async function loadCaptcha() {

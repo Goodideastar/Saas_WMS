@@ -108,11 +108,15 @@ async function loadAll() {
       getWarehouseDistribution()
     ])
     summary.value = summaryRes.data || {}
-    alertStats.value = alertRes.data || {}
-    renderTrendChart(trendRes.data || [])
-    renderTopProductsChart(topRes.data || [])
-    renderAlertChart(alertRes.data || {})
-    renderWarehouseChart(warehouseRes.data || [])
+    alertStats.value = {
+      unhandled: Number(alertRes.data?.unhandled ?? 0),
+      belowMin: Number(alertRes.data?.belowMin ?? 0),
+      aboveMax: Number(alertRes.data?.aboveMax ?? 0)
+    }
+    renderTrendChart((trendRes.data || []).map(d => ({ date: d.date, inboundQuantity: Number(d.inboundQuantity ?? 0), outboundQuantity: Number(d.outboundQuantity ?? 0) })))
+    renderTopProductsChart((topRes.data || []).map(d => ({ productName: d.productName, outboundQuantity: Number(d.outboundQuantity ?? 0) })))
+    renderAlertChart(alertStats.value)
+    renderWarehouseChart((warehouseRes.data || []).map(d => ({ warehouseName: d.warehouseName, stockQuantity: Number(d.stockQuantity ?? 0) })))
     updateTime.value = dayjs().format('HH:mm:ss')
   } finally {
     refreshing.value = false

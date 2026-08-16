@@ -1,6 +1,8 @@
 -- WMS Database Initialization Script
 -- 在 MySQL 客户端执行: mysql -h <host> -u root -p < schema.sql
 -- 幂等：所有 CREATE TABLE 使用 IF NOT EXISTS，INSERT 使用 INSERT IGNORE（不覆盖已有数据）
+-- 表名与 Mapper XML 完全一致（无前缀）：user / role / permission / user_role / role_permission /
+--   warehouse / product / inbound_order / outbound_order / stock_log / stock_alert / operation_log
 
 CREATE DATABASE IF NOT EXISTS wms DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE wms;
@@ -9,7 +11,7 @@ USE wms;
 -- 系统表
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS sys_user (
+CREATE TABLE IF NOT EXISTS user (
     id          BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
     username    VARCHAR(50)  NOT NULL UNIQUE,
     password    VARCHAR(255) NOT NULL,
@@ -24,7 +26,7 @@ CREATE TABLE IF NOT EXISTS sys_user (
     version     INT          DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS sys_role (
+CREATE TABLE IF NOT EXISTS role (
     id          BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
     role_code   VARCHAR(50)  NOT NULL UNIQUE,
     role_name   VARCHAR(100) NOT NULL,
@@ -38,7 +40,7 @@ CREATE TABLE IF NOT EXISTS sys_role (
     version     INT          DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS sys_permission (
+CREATE TABLE IF NOT EXISTS permission (
     id              BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
     permission_code VARCHAR(100) NOT NULL UNIQUE,
     permission_name VARCHAR(100) NOT NULL,
@@ -54,17 +56,23 @@ CREATE TABLE IF NOT EXISTS sys_permission (
     version         INT          DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS sys_user_role (
-    id      BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    role_id BIGINT NOT NULL,
+CREATE TABLE IF NOT EXISTS user_role (
+    id          BIGINT   NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id     BIGINT   NOT NULL,
+    role_id     BIGINT   NOT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_deleted  TINYINT  DEFAULT 0,
     UNIQUE KEY uk_user_role (user_id, role_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS sys_role_permission (
-    id            BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    role_id       BIGINT NOT NULL,
-    permission_id BIGINT NOT NULL,
+CREATE TABLE IF NOT EXISTS role_permission (
+    id            BIGINT   NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    role_id       BIGINT   NOT NULL,
+    permission_id BIGINT   NOT NULL,
+    create_time   DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time   DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_deleted    TINYINT  DEFAULT 0,
     UNIQUE KEY uk_role_perm (role_id, permission_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -72,26 +80,26 @@ CREATE TABLE IF NOT EXISTS sys_role_permission (
 -- 基础业务表
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS wms_warehouse (
-    id               BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    warehouse_code   VARCHAR(50)  NOT NULL UNIQUE,
-    warehouse_name   VARCHAR(100) NOT NULL,
-    address          VARCHAR(255),
-    contact_person   VARCHAR(50),
-    contact_phone    VARCHAR(20),
-    status           TINYINT      DEFAULT 1,
-    remark           TEXT,
-    create_time      DATETIME     DEFAULT CURRENT_TIMESTAMP,
-    update_time      DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    create_by        VARCHAR(50),
-    update_by        VARCHAR(50),
-    is_deleted       TINYINT      DEFAULT 0,
-    version          INT          DEFAULT 0
+CREATE TABLE IF NOT EXISTS warehouse (
+    id             BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    warehouse_code VARCHAR(50)  NOT NULL,
+    warehouse_name VARCHAR(100) NOT NULL,
+    location       VARCHAR(255),
+    contact_person VARCHAR(50),
+    contact_phone  VARCHAR(20),
+    status         TINYINT      DEFAULT 1,
+    remark         TEXT,
+    create_time    DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    update_time    DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    create_by      VARCHAR(50),
+    update_by      VARCHAR(50),
+    is_deleted     TINYINT      DEFAULT 0,
+    version        INT          DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS wms_product (
+CREATE TABLE IF NOT EXISTS product (
     id              BIGINT        NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    product_code    VARCHAR(50)   NOT NULL UNIQUE,
+    product_code    VARCHAR(50)   NOT NULL,
     product_name    VARCHAR(100)  NOT NULL,
     specification   VARCHAR(100),
     unit            VARCHAR(20)   NOT NULL,
@@ -214,6 +222,8 @@ CREATE TABLE IF NOT EXISTS stock_log (
     after_stock   INT          DEFAULT 0,
     order_id      BIGINT,
     create_time   DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    update_time   DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_deleted    TINYINT      DEFAULT 0,
     KEY idx_product_id (product_id),
     KEY idx_create_time (create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -268,16 +278,16 @@ CREATE TABLE IF NOT EXISTS operation_log (
 
 -- 管理员密码: admin123  (BCrypt)
 -- 仅在用户不存在时插入，避免每次初始化覆盖已有的密码
-INSERT IGNORE INTO sys_user (id, username, password, email, phone, status, create_by, update_by)
+INSERT IGNORE INTO user (id, username, password, email, phone, status, create_by, update_by)
 VALUES (1, 'admin', '$2a$10$.Q.3vq3ND0R7v6ODGRAmYe6XnrVthVULGsnv1glErLOngdLFZUzHe',
         'admin@wms.com', '13800138000', 1, 'system', 'system');
 
-INSERT IGNORE INTO sys_role (id, role_code, role_name, description, status, create_by, update_by)
+INSERT IGNORE INTO role (id, role_code, role_name, description, status, create_by, update_by)
 VALUES (1, 'ADMIN',            '系统管理员', '拥有全部权限', 1, 'system', 'system'),
        (2, 'WAREHOUSE_MANAGER','仓库管理员', '出入库管理', 1, 'system', 'system'),
        (3, 'OPERATOR',         '操作员',     '日常操作',   1, 'system', 'system');
 
-INSERT IGNORE INTO sys_permission (id, permission_code, permission_name, resource_type, parent_id, path, status, create_by, update_by) VALUES
+INSERT IGNORE INTO permission (id, permission_code, permission_name, resource_type, parent_id, path, status, create_by, update_by) VALUES
 (1,'product:list','货品列表','button',0,'',1,'system','system'),
 (2,'product:add','新增货品','button',0,'',1,'system','system'),
 (3,'product:edit','修改货品','button',0,'',1,'system','system'),
@@ -293,12 +303,16 @@ INSERT IGNORE INTO sys_permission (id, permission_code, permission_name, resourc
 (13,'outbound:query','查询出库单','button',0,'',1,'system','system'),
 (14,'alert:query','查询预警','button',0,'',1,'system','system'),
 (15,'alert:handle','处理预警','button',0,'',1,'system','system'),
-(16,'dashboard:query','查看看板','button',0,'',1,'system','system');
+(16,'dashboard:query','查看看板','button',0,'',1,'system','system'),
+(17,'warehouse:list','仓库列表','button',0,'',1,'system','system'),
+(18,'warehouse:add','新增仓库','button',0,'',1,'system','system'),
+(19,'warehouse:edit','修改仓库','button',0,'',1,'system','system'),
+(20,'warehouse:delete','删除仓库','button',0,'',1,'system','system');
 
-REPLACE INTO sys_user_role (id, user_id, role_id) VALUES (1, 1, 1);
+INSERT IGNORE INTO user_role (id, user_id, role_id) VALUES (1, 1, 1);
 
-INSERT IGNORE INTO sys_role_permission (id, role_id, permission_id)
-SELECT id, 1, id FROM sys_permission;
+INSERT IGNORE INTO role_permission (id, role_id, permission_id)
+SELECT id, 1, id FROM permission;
 
-INSERT IGNORE INTO wms_warehouse (id, warehouse_code, warehouse_name, address, contact_person, contact_phone, status, create_by, update_by)
+INSERT IGNORE INTO warehouse (id, warehouse_code, warehouse_name, location, contact_person, contact_phone, status, create_by, update_by)
 VALUES (1, 'WH001', '主仓库', '北京市朝阳区', '张三', '13800138001', 1, 'system', 'system');

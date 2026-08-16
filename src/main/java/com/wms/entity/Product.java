@@ -11,7 +11,11 @@ import java.time.LocalDate;
 public class Product extends BaseEntity {
     private String productCode;
     private String productName;
+    private String specification;
+    private String unit;
     private String category;
+    private String imageUrl;
+    private String remark;
     private Integer currentStock;
     private BigDecimal referenceCost;
     private BigDecimal referencePrice;

@@ -33,6 +33,10 @@
             <el-icon><Box /></el-icon>
             <template #title>货品管理</template>
           </el-menu-item>
+          <el-menu-item v-if="hasPermission('warehouse:list')" index="/warehouse/list">
+            <el-icon><OfficeBuilding /></el-icon>
+            <template #title>仓库管理</template>
+          </el-menu-item>
           <el-menu-item index="/inbound/list">
             <el-icon><Download /></el-icon>
             <template #title>入库管理</template>
@@ -111,7 +115,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
-import { HomeFilled, UserFilled, ArrowDown, SwitchButton, FullScreen } from '@element-plus/icons-vue'
+import { HomeFilled, UserFilled, ArrowDown, SwitchButton, FullScreen, OfficeBuilding } from '@element-plus/icons-vue'
 import AiChatTrigger from '@/components/AiChat/AiChatTrigger.vue'
 import AiChatPanel from '@/components/AiChat/AiChatPanel.vue'
 
@@ -123,6 +127,11 @@ const isCollapse = ref(false)
 const aiPanelOpen = ref(false)
 const activeMenu = computed(() => route.path)
 const userInfo = computed(() => userStore.userInfo)
+
+function hasPermission(code) {
+  const perms = userStore.permissions || []
+  return perms.includes('*') || perms.includes('*:*:*') || perms.includes(code)
+}
 
 async function handleCommand(command) {
   if (command === 'logout') {

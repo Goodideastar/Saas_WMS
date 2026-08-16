@@ -100,7 +100,7 @@
     </select>
 
     <select id="selectSeq" resultType="long">
-        SELECT IFNULL(MAX(CAST(SUBSTRING(order_no, 11) AS UNSIGNED)), 0)
+        SELECT IFNULL(MAX(CAST(SUBSTRING(order_no, 12) AS UNSIGNED)), 0)
         FROM outbound_order
         WHERE order_no LIKE CONCAT('OUT', DATE_FORMAT(NOW(), '%Y%m%d'), '%') AND is_deleted = 0
     </select>
