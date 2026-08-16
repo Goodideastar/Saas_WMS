@@ -84,6 +84,8 @@ services:
       # 生产 Redis 启用了 requirepass，连接串必须带密码
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
       LLM_API_KEY: ${LLM_API_KEY:?LLM_API_KEY is required}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://maas-api.cn-huabei-1.xf-yun.com/v2}
+      LLM_MODEL: ${LLM_MODEL:-xopqwen36v35b}
     deploy:
       resources:
         limits:
