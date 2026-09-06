@@ -1,5 +1,7 @@
 package com.wms.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wms.common.Result;
 import com.wms.utils.JwtUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -39,6 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserDetailsService userDetailsService;
     private final StringRedisTemplate redisTemplate;
     private final AntPathMatcher pathMatcher;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public JwtAuthenticationFilter(JwtUtils jwtUtils, UserDetailsService userDetailsService,
             StringRedisTemplate redisTemplate) {
@@ -63,7 +66,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 if (Boolean.TRUE.equals(
                         redisTemplate.hasKey(TOKEN_BLACKLIST_PREFIX + token))) {
-                    filterChain.doFilter(request, response);
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write(objectMapper.writeValueAsString(Result.error(401, "登录已失效，请重新登录")));
                     return;
                 }
 

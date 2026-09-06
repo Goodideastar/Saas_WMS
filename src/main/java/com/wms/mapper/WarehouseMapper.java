@@ -25,7 +25,7 @@ public interface WarehouseMapper {
 
     int insert(Warehouse warehouse);
 
-    int updateById(Warehouse warehouse);
+    int updateById(Warehouse warehouse, @Param("version") int version);
 
     int deleteById(@Param("id") Long id, @Param("updateBy") String updateBy);
 

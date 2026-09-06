@@ -6,11 +6,13 @@ import com.wms.dto.InboundOrderQueryDto;
 import com.wms.dto.PageResult;
 import com.wms.entity.InboundOrder;
 import com.wms.entity.InboundOrderItem;
+import com.wms.entity.Product;
 import com.wms.exception.BusinessException;
 import com.wms.mapper.InboundOrderMapper;
 import com.wms.mapper.ProductMapper;
 import com.wms.mapper.WarehouseMapper;
 import com.wms.service.InboundOrderService;
+import com.wms.service.StockAlertService;
 import com.wms.vo.InboundOrderVo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,14 +31,17 @@ public class InboundOrderServiceImpl implements InboundOrderService {
     private final ProductMapper productMapper;
     private final WarehouseMapper warehouseMapper;
     private final com.wms.mapper.StockLogMapper stockLogMapper;
+    private final StockAlertService stockAlertService;
 
     public InboundOrderServiceImpl(InboundOrderMapper inboundOrderMapper, ProductMapper productMapper,
                                    WarehouseMapper warehouseMapper,
-                                   com.wms.mapper.StockLogMapper stockLogMapper) {
+                                   com.wms.mapper.StockLogMapper stockLogMapper,
+                                   StockAlertService stockAlertService) {
         this.inboundOrderMapper = inboundOrderMapper;
         this.productMapper = productMapper;
         this.warehouseMapper = warehouseMapper;
         this.stockLogMapper = stockLogMapper;
+        this.stockAlertService = stockAlertService;
     }
 
     @Override
@@ -102,10 +107,19 @@ public class InboundOrderServiceImpl implements InboundOrderService {
             if (item.getActualQuantity() == null || item.getActualQuantity() <= 0) {
                 throw new BusinessException(400, "请完成实入数量录入: " + item.getProductName());
             }
-            int beforeStock = item.getProductId() != null ? getProductStock(item.getProductId()) : 0;
+            Long productId = item.getProductId();
+            Product product = productId != null ? productMapper.selectById(productId) : null;
+            int beforeStock = product != null ? (product.getCurrentStock() != null ? product.getCurrentStock() : 0) : 0;
             int afterStock = beforeStock + item.getActualQuantity();
-            if (item.getProductId() != null) {
-                productMapper.updateVersionById(item.getProductId(), 0, afterStock);
+            if (productId != null) {
+                if (product == null) {
+                    throw new BusinessException(404, "货品不存在或已删除: " + item.getProductCode());
+                }
+                int updated = productMapper.updateVersionById(productId, product.getVersion(), afterStock);
+                if (updated == 0) {
+                    throw new BusinessException(409, "库存版本冲突，请刷新后重试: " + item.getProductName());
+                }
+                stockAlertService.checkAndCreateAlerts(productId, order.getWarehouseId());
             }
             total = total.add(item.getUnitPrice() != null
                     ? item.getUnitPrice().multiply(BigDecimal.valueOf(item.getActualQuantity()))
@@ -160,12 +174,6 @@ public class InboundOrderServiceImpl implements InboundOrderService {
             throw new BusinessException(404, "入库单不存在");
         }
         return convertToVo(order);
-    }
-
-    private int getProductStock(Long productId) {
-        if (productId == null) return 0;
-        var product = productMapper.selectById(productId);
-        return product != null ? (product.getCurrentStock() != null ? product.getCurrentStock() : 0) : 0;
     }
 
     private void createStockLog(Long productId, String productCode, String productName,

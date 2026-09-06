@@ -18,6 +18,12 @@ public interface DashboardMapper {
 
     Map<String, Object> alertStats();
 
+    int totalProductCount();
+
+    Map<String, Object> todayPendingInboundStats();
+
+    Map<String, Object> todayPendingOutboundStats();
+
     List<Map<String, Object>> topOutboundProducts(@org.apache.ibatis.annotations.Param("limit") int limit);
 
     List<Map<String, Object>> warehouseDistribution();

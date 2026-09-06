@@ -29,7 +29,7 @@ public class StockAlertServiceImpl implements StockAlertService {
     }
 
     @Override
-    public void checkAndCreateAlerts(Long productId) {
+    public void checkAndCreateAlerts(Long productId, Long warehouseId) {
         var product = productMapper.selectById(productId);
         if (product == null) return;
 
@@ -53,7 +53,7 @@ public class StockAlertServiceImpl implements StockAlertService {
             alert.setProductId(productId);
             alert.setProductCode(product.getProductCode());
             alert.setProductName(product.getProductName());
-            alert.setWarehouseId(product.getId());
+            alert.setWarehouseId(warehouseId);
             alert.setAlertType(String.join(",", alerts));
             alert.setAlertValue(alertMin != null ? alertMin : 0);
             alert.setActualStock(currentStock);

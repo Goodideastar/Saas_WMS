@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface StockAlertService {
-    void checkAndCreateAlerts(Long productId);
+    void checkAndCreateAlerts(Long productId, Long warehouseId);
     PageResult<StockAlertVo> pageQuery(StockAlertQueryDto queryDto);
     void handleAlert(StockAlertHandleDto dto);
     void batchUpdateThresholds(List<StockThresholdDto> thresholds);

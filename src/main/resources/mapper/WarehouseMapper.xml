@@ -85,7 +85,8 @@
 
     <update id="updateById" parameterType="com.wms.entity.Warehouse">
         UPDATE warehouse
-        SET warehouse_name = #{warehouseName},
+        SET warehouse_code  = #{warehouseCode},
+            warehouse_name  = #{warehouseName},
             location       = #{location},
             contact_person = #{contactPerson},
             contact_phone  = #{contactPhone},
@@ -93,7 +94,7 @@
             remark         = #{remark},
             update_by      = #{updateBy},
             version        = version + 1
-        WHERE id = #{id} AND is_deleted = 0
+        WHERE id = #{id} AND is_deleted = 0 AND version = #{version}
     </update>
 
     <update id="deleteById">

@@ -100,22 +100,26 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(4004, "账号已被禁用");
         }
 
+        List<String> permissionCodes = loadPermissionCodes(user.getId());
+        String token = jwtUtils.generateToken(user.getUsername(), user.getId());
         UserDetailsImpl userDetails = new UserDetailsImpl(
                 user.getId(), user.getUsername(), user.getPassword(),
                 user.getEmail(), user.getPhone(), user.getStatus(),
-                List.of(new SimpleGrantedAuthority("ROLE_USER")));
-        String token = jwtUtils.generateToken(user.getUsername(), user.getId());
-        redisTemplate.opsForValue().set("user:token:" + token, String.valueOf(user.getId()), 2, TimeUnit.HOURS);
+                permissionCodes.stream()
+                        .map(code -> new SimpleGrantedAuthority("PERM:" + code))
+                        .collect(Collectors.toList()));
+        long ttlMs = jwtUtils.getAccessTokenExpiration();
+        redisTemplate.opsForValue().set("user:token:" + token, String.valueOf(user.getId()), ttlMs, TimeUnit.MILLISECONDS);
         try {
             redisTemplate.opsForValue().set("user:perm:" + user.getId(),
-                    objectMapper.writeValueAsString(loadPermissionCodes(user.getId())), 2, TimeUnit.HOURS);
+                    objectMapper.writeValueAsString(permissionCodes), ttlMs, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-            redisTemplate.opsForValue().set("user:perm:" + user.getId(), "[]", 2, TimeUnit.HOURS);
+            redisTemplate.opsForValue().set("user:perm:" + user.getId(), "[]", ttlMs, TimeUnit.MILLISECONDS);
         }
 
         LoginVo loginVo = new LoginVo();
         loginVo.setAccessToken(token);
-        loginVo.setExpiresIn(7200L);
+        loginVo.setExpiresIn(ttlMs / 1000);
         return loginVo;
     }
 
@@ -123,7 +127,7 @@ public class AuthServiceImpl implements AuthService {
     public void register(RegisterDto dto) {
         var existing = userMapper.selectByUsername(dto.getUsername());
         if (existing != null) {
-            throw new RuntimeException("Username already exists");
+            throw new BusinessException(400, "用户名已存在");
         }
         var user = new com.wms.entity.User();
         user.setUsername(dto.getUsername());
@@ -137,12 +141,14 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void logout(String token) {
         redisTemplate.delete("user:token:" + token);
+        redisTemplate.opsForValue().set("auth:blacklist:" + token, "1",
+                jwtUtils.getAccessTokenExpiration(), TimeUnit.MILLISECONDS);
     }
 
     @Override
     public UserInfoVo getUserInfo(Long userId) {
         var user = userMapper.selectById(userId);
-        if (user == null) throw new RuntimeException("User not found");
+        if (user == null) throw new BusinessException(404, "用户不存在");
         List<String> roleCodes = loadEnabledRoles(userId).stream()
                 .map(Role::getRoleCode)
                 .collect(Collectors.toList());

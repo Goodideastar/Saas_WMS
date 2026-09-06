@@ -1,10 +1,10 @@
 services:
   mysql:
-    image: mysql:8.0
+    image: mysql:latest
     container_name: wms-mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-wms123456}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-wms}
       TZ: Asia/Shanghai
     ports:
@@ -22,6 +22,9 @@ services:
     deploy:
       resources:
         limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
           memory: 512M
           cpus: '0.5'
     networks:
@@ -31,21 +34,22 @@ services:
     image: redis:latest
     container_name: wms-redis
     restart: always
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     environment:
       TZ: Asia/Shanghai
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
     deploy:
       resources:
         limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
           memory: 256M
           cpus: '0.25'
     networks:
@@ -59,19 +63,17 @@ services:
         MAVEN_OPTS: "-Xmx1g"
     container_name: wms-backend
     restart: always
-    ports:
-      - "${BACKEND_PORT:-8080}:8080"
     environment:
       TZ: Asia/Shanghai
       LANG: C.UTF-8
       LC_ALL: C.UTF-8
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-wms}?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-wms}?useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-wms123456}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      SPRING_DATA_REDIS_PASSWORD: ""
-      JWT_SECRET: ${JWT_SECRET:-wms-jwt-secret-key-2024-very-long-secret-for-security}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
     depends_on:
       mysql:
         condition: service_healthy
@@ -86,6 +88,9 @@ services:
     deploy:
       resources:
         limits:
+          memory: 2G
+          cpus: '2.0'
+        reservations:
           memory: 1G
           cpus: '1.0'
     networks:
@@ -105,7 +110,8 @@ services:
     container_name: wms-frontend
     restart: always
     ports:
-      - "${FRONTEND_PORT:-80}:80"
+      - "80:80"
+      - "443:443"
     environment:
       TZ: Asia/Shanghai
     depends_on:
@@ -118,6 +124,9 @@ services:
     deploy:
       resources:
         limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
           memory: 256M
           cpus: '0.5'
     networks:
@@ -131,16 +140,14 @@ services:
   ai-gateway:
     build: ./ai-gateway
     container_name: wms-ai-gateway
-    ports:
-      - "${AI_GATEWAY_PORT:-8090}:8090"
     environment:
       TZ: Asia/Shanghai
-      LLM_PROVIDER: ${LLM_PROVIDER:-qwen}
+      LLM_PROVIDER: ${LLM_PROVIDER:-agnes}
       LLM_API_KEY: ${LLM_API_KEY:?LLM_API_KEY is required (cp .env.example .env)}
-      LLM_BASE_URL: ${LLM_BASE_URL:-https://maas-api.cn-huabei-1.xf-yun.com/v2}
-      LLM_MODEL: ${LLM_MODEL:-xopqwen36v35b}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://apihub.agnes-ai.cn/v1}
+      LLM_MODEL: ${LLM_MODEL:-agnes-2.5-flash}
       WMS_BASE_URL: http://backend:8080
-      REDIS_URL: redis://redis:6379/0
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       AI_GATEWAY_PORT: 8090
     depends_on:
       backend:
@@ -156,8 +163,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
-          cpus: '0.5'
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
     restart: always
     networks:
       - wms-network

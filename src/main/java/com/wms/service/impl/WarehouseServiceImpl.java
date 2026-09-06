@@ -8,6 +8,7 @@ import com.wms.mapper.WarehouseMapper;
 import com.wms.service.WarehouseService;
 import com.wms.vo.WarehouseVo;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -81,16 +82,21 @@ public class WarehouseServiceImpl implements WarehouseService {
         }
         Warehouse warehouse = new Warehouse();
         warehouse.setId(dto.getId());
+        warehouse.setWarehouseCode(dto.getWarehouseCode());
         warehouse.setWarehouseName(dto.getWarehouseName());
         warehouse.setLocation(dto.getLocation());
         warehouse.setContactPerson(dto.getContactPerson());
         warehouse.setContactPhone(dto.getContactPhone());
         warehouse.setStatus(dto.getStatus() != null ? dto.getStatus() : existing.getStatus());
         warehouse.setRemark(dto.getRemark());
-        warehouseMapper.updateById(warehouse);
+        int updated = warehouseMapper.updateById(warehouse, existing.getVersion());
+        if (updated == 0) {
+            throw new BusinessException(409, "仓库信息已被他人修改，请刷新后重试");
+        }
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void deleteWarehouse(Long id) {
         Warehouse existing = warehouseMapper.selectById(id);
         if (existing == null) {

@@ -43,6 +43,20 @@
         WHERE is_deleted = 0
     </select>
 
+    <select id="totalProductCount" resultType="int">
+        SELECT COUNT(*) FROM product WHERE is_deleted = 0
+    </select>
+
+    <select id="todayPendingInboundStats" resultType="java.util.HashMap">
+        SELECT COUNT(*) AS pendingCount FROM inbound_order
+        WHERE is_deleted = 0 AND status = 'PENDING' AND create_time >= CURDATE()
+    </select>
+
+    <select id="todayPendingOutboundStats" resultType="java.util.HashMap">
+        SELECT COUNT(*) AS pendingCount FROM outbound_order
+        WHERE is_deleted = 0 AND status = 'PENDING' AND create_time >= CURDATE()
+    </select>
+
     <select id="topOutboundProducts" resultType="java.util.HashMap">
         SELECT product_name                        AS productName,
                COALESCE(SUM(quantity), 0)          AS outboundQuantity

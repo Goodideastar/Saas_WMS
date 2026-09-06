@@ -27,12 +27,20 @@ public class DashboardServiceImpl implements DashboardService {
         TodaySummaryVo vo = new TodaySummaryVo();
         Map<String, Object> inbound = dashboardMapper.todayInboundStats();
         Map<String, Object> outbound = dashboardMapper.todayOutboundStats();
+        Map<String, Object> alertStats = dashboardMapper.alertStats();
+        Map<String, Object> pendingIn = dashboardMapper.todayPendingInboundStats();
+        Map<String, Object> pendingOut = dashboardMapper.todayPendingOutboundStats();
 
         vo.setInboundCount(toLong(inbound.get("orderCount")));
         vo.setOutboundCount(toLong(outbound.get("orderCount")));
         vo.setInboundAmount(toDecimal(inbound.get("totalAmount")));
         vo.setOutboundAmount(toDecimal(outbound.get("totalAmount")));
-        vo.setTotalStock(dashboardMapper.totalStock() != null ? dashboardMapper.totalStock().intValue() : 0);
+        Long totalStockLong = dashboardMapper.totalStock();
+        vo.setTotalStock(totalStockLong != null ? totalStockLong.intValue() : 0);
+        vo.setAlertCount(toLong(alertStats.get("unhandled")));
+        vo.setTotalProducts(dashboardMapper.totalProductCount());
+        vo.setPendingInbound(toInt(pendingIn.get("pendingCount")));
+        vo.setPendingOutbound(toInt(pendingOut.get("pendingCount")));
         return vo;
     }
 
@@ -100,6 +108,12 @@ public class DashboardServiceImpl implements DashboardService {
         if (value instanceof BigDecimal bd) return bd.longValue();
         if (value instanceof Number n) return n.longValue();
         return 0L;
+    }
+
+    private int toInt(Object value) {
+        if (value == null) return 0;
+        if (value instanceof Number n) return n.intValue();
+        return 0;
     }
 
     private BigDecimal toDecimal(Object value) {

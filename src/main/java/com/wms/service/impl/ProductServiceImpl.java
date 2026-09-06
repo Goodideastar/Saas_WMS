@@ -12,9 +12,8 @@ import com.wms.mapper.StockLogMapper;
 import com.wms.service.ProductService;
 import com.wms.vo.ProductVo;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -97,6 +96,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void adjustStock(StockAdjustDto dto) {
         Product product = productMapper.selectForUpdate(dto.getProductId());
         if (product == null) {
@@ -134,6 +134,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void batchAdjustStock(BatchStockAdjustDto dto) {
         for (BatchStockAdjustDto.BatchAdjustItem item : dto.getItems()) {
             StockAdjustDto singleDto = new StockAdjustDto();
