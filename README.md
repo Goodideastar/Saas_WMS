@@ -38,7 +38,7 @@ cd frontend && npm run dev         # 前端 :3000（代理 /api → 8080）
 
 | 层 | 技术 |
 |---|---|
-| 后端 | Spring Boot 3.2 / Java 21 / MyBatis Plus / Spring Security + JWT / Redisson |
+| 后端 | Spring Boot 3.2 / Java 21 / MyBatis / Spring Security + JWT / Redisson |
 | 前端 | Vue 3 / Vite / Element Plus / Pinia / ECharts |
 | AI 网关 | FastAPI / SSE / LLM Agent（qwen / deepseek） |
 | 基础设施 | MySQL 8.0 / Redis 7 / Nginx / Docker Compose |
